@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="deadline-page-title"><span class="deadline-eyebrow">วางแผน</span><h1>รู้ก่อนว่างานจะชนกัน</h1><p class="lead">กำหนดเวลาที่คุณทำงานได้ต่อวัน แล้วดูว่าแต่ละช่วงมีเวลาพอหรือไม่</p></div>
+
+<form method="get" class="panel deadline-hours-form">
+  <div class="field"><label for="daily-hours">เวลาที่ทำงานได้ต่อวัน (ชั่วโมง)</label><input id="daily-hours" name="hours" type="number" min="0.1" max="12" step="0.1" value="{{ daily_hours }}" required></div>
+  <button class="btn" type="submit">คำนวณแผน</button>
+</form>
+
+<div class="stat-grid deadline-summary">
+  <div class="stat"><div class="label">งานที่ต้องวางแผน</div><div class="value">{{ tasks|length }}</div><div class="unit">รายการ</div></div>
+  <div class="stat {{ 'bad' if risk_count else 'good' }}"><div class="label">งานที่เสี่ยงไม่ทัน</div><div class="value">{{ risk_count }}</div><div class="unit">รายการ</div></div>
+  <div class="stat gold"><div class="label">เวลาที่แบ่งได้</div><div class="value">{{ daily_hours }}</div><div class="unit">ชั่วโมงต่อวัน</div></div>
+</div>
+
+{% if focus %}<div class="deadline-focus"><span class="deadline-eyebrow">เริ่มจากงานนี้</span><strong>{{ focus.title }}</strong><span>วิชา {{ focus.course }} · ส่ง {{ focus.due_date }}</span></div>{% endif %}
+
+<div class="deadline-section-head"><div><h2>ลำดับงานตามวันส่ง</h2><p class="note">ระบบรวมชั่วโมงงานที่ต้องเสร็จก่อนแต่ละวัน แล้วเทียบกับเวลาที่มี</p></div></div>
+<div class="deadline-task-list">
+  {% for task in tasks %}
+  <article class="deadline-task deadline-plan-task">
+    <div class="deadline-task-main"><span class="deadline-course">{{ task.course }}</span><h3>{{ task.title }}</h3><p class="deadline-meta">ส่ง <time datetime="{{ task.due_date }}">{{ task.due_date }}</time> · เหลือ {{ "{:,.1f}".format(task.remaining_hours) }} ชั่วโมง</p>
+      {% if task.days_left >= 0 %}<p class="deadline-plan-detail">งานสะสมถึงวันส่งนี้ต้องทำเฉลี่ย <strong>{{ task.hours_per_day }} ชั่วโมง/วัน</strong>{% if task.gap > 0 %} · ขาดเวลาอีก <strong>{{ task.gap }} ชั่วโมง</strong>{% endif %}</p>{% else %}<p class="deadline-plan-detail">เลยวันส่งแล้ว ควรติดต่อผู้สอนและจัดการงานนี้ก่อน</p>{% endif %}
+    </div>
+    <span class="badge {{ task.tone }}">{{ task.status }}</span>
+  </article>
+  {% else %}<div class="empty">งานทั้งหมดเสร็จแล้ว หรือยังไม่ได้เพิ่มงาน</div>{% endfor %}
+</div>
+<p class="note deadline-footnote">ผลลัพธ์เป็นการประมาณจากชั่วโมงที่กรอกไว้ หากมีเวลาทำงานไม่เท่ากันในแต่ละวัน ให้ปรับค่าแล้วคำนวณใหม่</p>
+{% endblock %}

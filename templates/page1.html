@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="deadline-hero">
+  <div>
+    <span class="deadline-eyebrow">DEADLINE COMPASS · ภาพรวม</span>
+    <h1>เห็นทุกงาน ก่อนงานจะชนกัน</h1>
+    <p>เช็กสิ่งที่ต้องส่งและเวลาที่เหลือ แล้วเลือกงานที่ควรเริ่มวันนี้</p>
+    <a class="btn" href="{{ url_for('page', name='page2') }}">+ เพิ่มงานใหม่</a>
+    <a class="btn ghost" href="{{ url_for('page', name='page3') }}">ดูแผนก่อนวันส่ง →</a>
+  </div>
+  <div class="deadline-hero-mark" aria-hidden="true"><span>✓</span><span>28</span></div>
+</section>
+
+<div class="stat-grid deadline-summary">
+  <div class="stat"><div class="label">งานที่ยังไม่เสร็จ</div><div class="value">{{ open_count }}</div><div class="unit">รายการ</div></div>
+  <div class="stat gold"><div class="label">ส่งภายใน 3 วัน</div><div class="value">{{ soon_count }}</div><div class="unit">รายการ</div></div>
+  <div class="stat"><div class="label">เวลาที่ยังต้องใช้</div><div class="value">{{ "{:,.1f}".format(remaining_total) }}</div><div class="unit">ชั่วโมง</div></div>
+</div>
+
+{% if overdue_count %}<div class="deadline-alert" role="status">มีงานเกินกำหนด {{ overdue_count }} รายการ ควรตรวจและปรับแผนวันนี้</div>{% endif %}
+
+<div class="deadline-section-head">
+  <div><h2>งานทั้งหมด</h2><p class="note">สีช่วยแยกสถานะ และมีข้อความกำกับทุกงาน</p></div>
+  <div class="deadline-reminder-control">
+    <button id="enable-reminders" class="btn ghost small" type="button">🔔 เปิดการแจ้งเตือน</button>
+    <span id="reminder-status" class="note" aria-live="polite"></span>
+  </div>
+</div>
+
+<div class="deadline-task-list">
+  {% for item in items %}
+  <article class="deadline-task">
+    <div class="deadline-task-main">
+      <span class="deadline-course">{{ item.course }}</span>
+      <h3>{{ item.title }}</h3>
+      <p class="deadline-meta">กำหนดส่ง <time datetime="{{ item.due_date }}">{{ item.due_date }}</time> · เหลือ {{ "{:,.1f}".format(item.remaining_hours) }} ชั่วโมง</p>
+      <div class="progress deadline-progress" role="progressbar" aria-label="ความคืบหน้า {{ item.title }}" aria-valuenow="{{ item.progress }}" aria-valuemin="0" aria-valuemax="100"><div style="width: {{ item.progress }}%"></div></div>
+    </div>
+    <div class="deadline-task-actions">
+      <span class="badge {{ item.tone }}">{{ item.status }}</span>
+      {% if item.remaining_hours > 0 and item.days_left >= 0 %}
+      <button class="deadline-text-button" type="button" data-calendar-title="{{ item.title }}" data-calendar-course="{{ item.course }}" data-calendar-date="{{ item.due_date }}">เพิ่มลงปฏิทิน</button>
+      {% endif %}
+    </div>
+  </article>
+  {% else %}
+  <div class="empty">ยังไม่มีงาน เพิ่มงานแรกในหน้าจัดการงาน</div>
+  {% endfor %}
+</div>
+<p class="note deadline-footnote">การเตือนผ่านเบราว์เซอร์ทำงานเมื่อเปิดหน้านี้อยู่ หากต้องการเตือนหลังปิดเว็บ ให้กด “เพิ่มลงปฏิทิน” แล้วนำไฟล์ที่ได้เข้าแอปปฏิทินของคุณ</p>
+<script id="reminder-data" type="application/json">{{ items|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/reminders.js') }}" defer></script>{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="deadline-hero deadline-home-hero">
+  <div>
+    <span class="deadline-eyebrow">DEADLINE COMPASS</span>
+    <h1>เดดไลน์ไม่ชนกัน</h1>
+    <p>เห็นงานทั้งหมด วางเวลาที่มี และเริ่มงานสำคัญก่อนถึงวันส่ง</p>
+    <a class="btn" href="{{ url_for('page', name='page1') }}">เปิดภาพรวมงาน →</a>
+  </div>
+  <div class="deadline-hero-mark" aria-hidden="true"><span>✓</span><span>28</span></div>
+</section>
+<section class="cards deadline-home-cards">
+  <a class="card" href="{{ url_for('page', name='page1') }}"><span class="card-kicker">01 · ภาพรวม</span><span class="card-title">วันนี้มีอะไรต้องทำ</span><span class="note">ดูงานและสถานะในที่เดียว</span></a>
+  <a class="card" href="{{ url_for('page', name='page2') }}"><span class="card-kicker">02 · จัดการ</span><span class="card-title">บันทึกงานให้ครบ</span><span class="note">เพิ่ม แก้ไข และติดตามชั่วโมง</span></a>
+  <a class="card" href="{{ url_for('page', name='page3') }}"><span class="card-kicker">03 · วางแผน</span><span class="card-title">รู้ทันงานที่ชนกัน</span><span class="note">เทียบงานค้างกับเวลาที่มีจริง</span></a>
+</section>
+{% endblock %}

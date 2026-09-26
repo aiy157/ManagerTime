@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="deadline-page-title"><span class="deadline-eyebrow">จัดการงาน</span><h1>เพิ่มงานและอัปเดตความคืบหน้า</h1><p class="lead">กรอกเวลาที่คาดว่าจะใช้ให้ใกล้เคียงจริง เพื่อให้หน้าแผนช่วยเตือนได้แม่นยำ</p></div>
+
+<div class="two-col deadline-form-layout">
+  <form method="post" class="panel deadline-add-form">
+    <h2>งานใหม่</h2>
+    <input type="hidden" name="action" value="add">
+    <div class="field"><label for="new-title">ชื่องาน</label><input id="new-title" name="title" maxlength="80" placeholder="เช่น รายงานการทดลอง" required></div>
+    <div class="field"><label for="new-course">วิชา</label><input id="new-course" name="course" maxlength="40" placeholder="เช่น ฟิสิกส์" required></div>
+    <div class="field"><label for="new-date">วันส่ง</label><input id="new-date" name="due_date" type="date" required></div>
+    <div class="field"><label for="new-hours">เวลาที่คาดว่าจะใช้ (ชั่วโมง)</label><input id="new-hours" name="estimated_hours" type="number" min="0.1" max="200" step="0.1" placeholder="เช่น 4" required></div>
+    <button class="btn full" type="submit">บันทึกงาน</button>
+  </form>
+
+  <div>
+    <div class="deadline-section-head"><div><h2>รายการที่บันทึก</h2><p class="note">{{ count }} งาน · เปิดแต่ละการ์ดเพื่อแก้ไข</p></div></div>
+    {% for item in items %}
+    <article class="panel deadline-edit-card">
+      <div class="deadline-edit-heading"><div><span class="deadline-course">{{ item.course }}</span><h3>{{ item.title }}</h3><p class="deadline-meta">ส่ง {{ item.due_date }} · เหลือ {{ "{:,.1f}".format(item.remaining_hours) }} ชั่วโมง</p></div><span class="badge {{ 'good' if item.remaining_hours == 0 else 'gold' }}">{{ 'เสร็จแล้ว' if item.remaining_hours == 0 else 'กำลังทำ' }}</span></div>
+      <details>
+        <summary>แก้ไขงานหรือบันทึกชั่วโมงที่ทำแล้ว</summary>
+        <form method="post" class="deadline-edit-form">
+          <input type="hidden" name="action" value="update"><input type="hidden" name="no" value="{{ item.no }}">
+          <div class="field"><label for="title-{{ item.no }}">ชื่องาน</label><input id="title-{{ item.no }}" name="title" value="{{ item.title }}" maxlength="80" required></div>
+          <div class="field"><label for="course-{{ item.no }}">วิชา</label><input id="course-{{ item.no }}" name="course" value="{{ item.course }}" maxlength="40" required></div>
+          <div class="field-row"><div class="field"><label for="date-{{ item.no }}">วันส่ง</label><input id="date-{{ item.no }}" name="due_date" type="date" value="{{ item.due_date }}" required></div><div class="field"><label for="hours-{{ item.no }}">ชั่วโมงทั้งหมด</label><input id="hours-{{ item.no }}" name="estimated_hours" type="number" min="0.1" max="200" step="0.1" value="{{ item.estimated_hours }}" required></div><div class="field"><label for="done-{{ item.no }}">ทำแล้ว (ชั่วโมง)</label><input id="done-{{ item.no }}" name="done_hours" type="number" min="0" step="0.1" value="{{ item.done_hours }}" required></div></div>
+          <button class="btn small" type="submit">บันทึกการแก้ไข</button>
+        </form>
+        <form method="post" class="deadline-delete-form" onsubmit="return confirm('ต้องการลบงานนี้หรือไม่?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="no" value="{{ item.no }}"><button class="btn danger small" type="submit">ลบงานนี้</button></form>
+      </details>
+    </article>
+    {% else %}<div class="empty">ยังไม่มีงานที่บันทึกไว้</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}
