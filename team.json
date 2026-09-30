@@ -1,13 +1,14 @@
 {
   "group": {
-    "name": "Group ??",
-    "section": "sec ??",
+    "name": "CodeMind",
+    "section": "กลุ่ม 6",
     "topic": "เดดไลน์ไม่ชนกัน",
     "description": "เว็บช่วยบันทึกงาน วางแผนเวลา และเตือนก่อนงานหลายวิชาชนกัน"
   },
   "members": [
-    {"name": "ชื่อ-สกุล", "id": "66xxxxxxx", "role": "หัวหน้ากลุ่ม", "task": "page1 · ภาพรวมงาน"},
-    {"name": "ชื่อ-สกุล", "id": "66xxxxxxx", "role": "สมาชิก", "task": "page2 · จัดการงาน"},
-    {"name": "ชื่อ-สกุล", "id": "66xxxxxxx", "role": "สมาชิก", "task": "page3 · แผนก่อนวันส่ง"}
+    {"name": "นางสาวลักขณา ศรีโพธิ์", "id": "69130840153", "role": "Backend Dev (Python)", "task": "page1 · ภาพรวมงาน"},
+    {"name": "นายวายุ ทาโสม", "id": "69130840182", "role": "Project Lead (PM)", "task": "models.py · Assignment"},
+    {"name": "นายไกรวิชญ์ บุ้งทอง", "id": "69130840247", "role": "Frontend Dev (HTML/CSS)", "task": "page2 · จัดการงาน"},
+    {"name": "นายธีรเดช ฤทธิ์คำรพ", "id": "69130840320", "role": "QA / Test", "task": "page3 · แผนก่อนวันส่ง และ check.bat"}
   ]
 }
