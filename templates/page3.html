@@ -1,30 +1,55 @@
 {% extends "base.html" %}
+{% from "_task_card.html" import quick_actions %}
 {% block content %}
-<div class="deadline-page-title"><span class="deadline-eyebrow">วางแผน</span><h1>รู้ก่อนว่างานจะชนกัน</h1><p class="lead">กำหนดเวลาที่คุณทำงานได้ต่อวัน แล้วดูว่าแต่ละช่วงมีเวลาพอหรือไม่</p></div>
-
-<form method="get" class="panel deadline-hours-form">
-  <div class="field"><label for="daily-hours">เวลาที่ทำงานได้ต่อวัน (ชั่วโมง)</label><input id="daily-hours" name="hours" type="number" min="0.1" max="12" step="0.1" value="{{ daily_hours }}" required></div>
-  <button class="btn" type="submit">คำนวณแผน</button>
+<div class="deadline-page-title"><span class="deadline-eyebrow">วางแผนก่อนวันส่ง</span><h1>เห็นเวลาที่ขาด แล้วปรับแผนให้ทัน</h1><p class="lead">รวมงานที่ต้องเสร็จภายในแต่ละวัน และเปรียบเทียบกับเวลาว่างจริงของคุณ</p></div>
+<form method="post" action="{{ url_for('page', name='page3') }}" class="panel deadline-hours-form">
+  <input type="hidden" name="action" value="save_hours">
+  <div class="field"><label for="daily-hours">มีเวลาว่างจริงวันละกี่ชั่วโมง</label><input id="daily-hours" name="hours" type="number" min="0.1" max="12" step="0.1" value="{{ daily_hours }}" aria-describedby="daily-help" required><small id="daily-help" class="deadline-help">เช่น 4 ชั่วโมง · บันทึกแล้วใช้ร่วมกับหน้าภาพรวม</small></div>
+  <button class="btn" type="submit">บันทึกและคำนวณแผน</button>
 </form>
-
 <div class="stat-grid deadline-summary">
-  <div class="stat"><div class="label">งานที่ต้องวางแผน</div><div class="value">{{ tasks|length }}</div><div class="unit">รายการ</div></div>
-  <div class="stat {{ 'bad' if risk_count else 'good' }}"><div class="label">งานที่เสี่ยงไม่ทัน</div><div class="value">{{ risk_count }}</div><div class="unit">รายการ</div></div>
-  <div class="stat gold"><div class="label">เวลาที่แบ่งได้</div><div class="value">{{ daily_hours }}</div><div class="unit">ชั่วโมงต่อวัน</div></div>
+  <div class="stat {{ 'bad' if risk_count else 'good' }}"><div class="label">งานที่เสี่ยงไม่ทัน</div><div class="value">{{ risk_count }}</div><div class="unit">จาก {{ open_count }} งานค้าง</div></div>
+  <div class="stat"><div class="label">ต้องทำเฉลี่ยอย่างน้อย</div><div class="value">{{ required_daily }}</div><div class="unit">ชั่วโมง/วัน ถึงกำหนดงานในอนาคต</div></div>
+  <div class="stat gold"><div class="label">มีเวลาว่างจริง</div><div class="value">{{ daily_hours }}</div><div class="unit">ชั่วโมง/วัน</div></div>
 </div>
+{% if daily_shortfall > 0 %}
+<div class="deadline-alert" role="status"><strong>! ต้องทำประมาณ {{ required_daily }} ชั่วโมง/วัน แต่มีเวลา {{ daily_hours }} ชั่วโมง/วัน</strong><p>จึงขาดอย่างน้อย {{ daily_shortfall }} ชั่วโมง/วัน ในช่วงที่แน่นที่สุด ควรแบ่งงาน ลดขอบเขต หรือปรึกษาผู้สอนเรื่องกำหนดส่ง</p></div>
+{% elif tasks %}
+<p class="deadline-insight">✓ เวลาสำหรับกำหนดส่งในอนาคตอยู่ในแผน{% if overdue_count %} แต่ยังมี {{ overdue_count }} งานเกินกำหนดที่ต้องจัดการ{% endif %}</p>
+{% endif %}
+{% if overdue_count %}<p class="deadline-insight">! งานเกินกำหนด {{ overdue_count }} รายการยังรวมในภาระสะสม ควรติดต่อผู้สอนเพื่อยืนยันวันส่งใหม่</p>{% endif %}
+{% if soon_count > 1 %}<p class="note">◷ มี {{ soon_count }} งานใกล้ถึงกำหนด ควรเริ่มตามลำดับในภาพรวมวันนี้</p>{% endif %}
 
-{% if focus %}<div class="deadline-focus"><span class="deadline-eyebrow">เริ่มจากงานนี้</span><strong>{{ focus.title }}</strong><span>วิชา {{ focus.course }} · ส่ง {{ focus.due_date }}</span></div>{% endif %}
+{% if focus %}
+<section class="deadline-focus" aria-label="งานที่ควรเริ่มก่อน">
+  <span class="deadline-eyebrow">ควรเริ่มงานนี้ก่อน</span><strong>{{ focus.title }}</strong><span>{{ focus.course }} · {{ focus.deadline_label }} · วันนี้แบ่งให้ {{ focus.today_hours }} ชั่วโมง</span>
+  <div class="deadline-focus-actions">{{ quick_actions(focus, 'page3') }}</div>
+</section>
+{% endif %}
 
-<div class="deadline-section-head"><div><h2>ลำดับงานตามวันส่ง</h2><p class="note">ระบบรวมชั่วโมงงานที่ต้องเสร็จก่อนแต่ละวัน แล้วเทียบกับเวลาที่มี</p></div></div>
+<div class="deadline-section-head"><div><h2>แผนตามวันส่ง</h2><p class="note">งานวันเดียวกันใช้ภาระรวมเดียวกัน ตัวเลขเป็นการประมาณจากเวลาที่กรอก</p></div></div>
 <div class="deadline-task-list">
   {% for task in tasks %}
-  <article class="deadline-task deadline-plan-task">
-    <div class="deadline-task-main"><span class="deadline-course">{{ task.course }}</span><h3>{{ task.title }}</h3><p class="deadline-meta">ส่ง <time datetime="{{ task.due_date }}">{{ task.due_date }}</time> · เหลือ {{ "{:,.1f}".format(task.remaining_hours) }} ชั่วโมง</p>
-      {% if task.days_left >= 0 %}<p class="deadline-plan-detail">งานสะสมถึงวันส่งนี้ต้องทำเฉลี่ย <strong>{{ task.hours_per_day }} ชั่วโมง/วัน</strong>{% if task.gap > 0 %} · ขาดเวลาอีก <strong>{{ task.gap }} ชั่วโมง</strong>{% endif %}</p>{% else %}<p class="deadline-plan-detail">เลยวันส่งแล้ว ควรติดต่อผู้สอนและจัดการงานนี้ก่อน</p>{% endif %}
+  <article class="panel deadline-plan-card">
+    <div class="deadline-edit-heading">
+      <div><span class="deadline-course">{{ task.course }} · {{ task.owner_name }}</span><h3>{{ task.title }}</h3><p class="deadline-meta">ส่ง <time datetime="{{ task.due_date }}">{{ task.due_date }}</time> · งานนี้เหลือ {{ task.remaining_hours }} ชั่วโมง</p></div>
+      <span class="badge {{ task.plan_tone }}"><span aria-hidden="true">{{ task.plan_icon }}</span> {{ task.plan_status }}</span>
     </div>
-    <span class="badge {{ task.tone }}">{{ task.status }}</span>
+    <div class="deadline-badge-row"><span class="badge {{ task.tone }}">{{ task.status_icon }} {{ task.status }}</span><span class="badge {{ task.deadline_tone }}">{{ task.deadline_icon }} {{ task.deadline_label }}</span></div>
+    {% if task.days_left >= 0 %}
+    <div class="deadline-time-comparison">
+      <div><span>ต้องทำเฉลี่ย</span><strong>{{ task.hours_per_day }} <small>ชม./วัน</small></strong></div>
+      <div><span>มีเวลาว่างจริง</span><strong>{{ daily_hours }} <small>ชม./วัน</small></strong></div>
+      <div class="{{ 'deadline-time-bad' if task.at_risk }}"><span>ขาดเวลาเฉลี่ย</span><strong>{{ task.shortfall_per_day }} <small>ชม./วัน</small></strong></div>
+    </div>
+    <p class="deadline-plan-detail">งานสะสมถึงวันส่งนี้ <strong>{{ task.cumulative_hours }} ชั่วโมง</strong> · ทำได้ <strong>{{ task.available_hours }} ชั่วโมง</strong>{% if task.gap > 0 %} · ขาดรวม <strong>{{ task.gap }} ชั่วโมง</strong>{% endif %}</p>
+    {% else %}
+    <p class="deadline-plan-detail"><strong>เกินกำหนด {{ -task.days_left }} วัน</strong> · ควรติดต่อผู้สอนและจัดการก่อน{% if task.today_hours > 0 %} วันนี้แบ่งให้ {{ task.today_hours }} ชั่วโมง{% else %} เวลาวันนี้ถูกแบ่งให้งานก่อนหน้าแล้ว{% endif %}</p>
+    {% endif %}
+    <ul class="deadline-reasons">{% for reason in task.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+    {{ quick_actions(task, 'page3') }}
   </article>
-  {% else %}<div class="empty">งานทั้งหมดเสร็จแล้ว หรือยังไม่ได้เพิ่มงาน</div>{% endfor %}
+  {% else %}<div class="empty">✓ งานทั้งหมดเสร็จแล้ว หรือยังไม่ได้เพิ่มงาน</div>{% endfor %}
 </div>
-<p class="note deadline-footnote">ผลลัพธ์เป็นการประมาณจากชั่วโมงที่กรอกไว้ หากมีเวลาทำงานไม่เท่ากันในแต่ละวัน ให้ปรับค่าแล้วคำนวณใหม่</p>
+<p class="note deadline-footnote">วันนี้บันทึกเวลาทำจริงแล้ว {{ actual_today }} ชั่วโมง เหลือเวลาว่าง {{ today_remaining }} ชั่วโมง การคำนวณนับวันนี้และหักเวลาที่ใช้แล้วออกจากความจุ ส่วนค่าเฉลี่ยรวมเวลาที่ใช้ไปวันนี้ไม่เกินเวลาว่างที่ตั้งไว้ สมมติว่ามีเวลาว่างเท่ากันทุกวันและปัดส่วนขาดขึ้นเป็นทศนิยม 1 ตำแหน่ง</p>
 {% endblock %}

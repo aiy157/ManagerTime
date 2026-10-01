@@ -1,5 +1,9 @@
 # รายละเอียด JavaScript ข้อมูล JSON และเอกสารกำกับ
 
+**รายละเอียดปัจจุบัน:** อ่าน [สารบัญแยกรายไฟล์](current/README.md), [forms.js](current/files/static/js/forms.js.md), [reminders.js](current/files/static/js/reminders.js.md), [data.json](current/files/data.json.md), [data.sample.json](current/files/data.sample.json.md), [team.json](current/files/team.json.md) และ [planner_settings.json](current/files/planner_settings.json.md)
+
+> **เอกสารประวัติฉบับแรก:** ปัจจุบันข้อมูลงานมี 7 field และการเตือนดึงข้อมูลใหม่ทุกนาที รายละเอียดด้านล่างเป็น source ก่อนปรับปรุง 30 กันยายน 2569 อ่านโครงสร้างและข้อจำกัดล่าสุดใน [UPGRADE_DETAILS.md](UPGRADE_DETAILS.md)
+
 เอกสารนี้อ้างถึงไฟล์จริง ณ วันที่ 29 กันยายน 2569 เลขบรรทัดนับตามไฟล์บนดิสก์ รวมบรรทัดว่างและ comment หากเปิดเว็บแล้วบันทึกข้อมูล storage.save อาจจัดย่อหน้า JSON ใหม่ ทำให้เลขบรรทัดเปลี่ยนได้ ให้ใช้เนื้อหาและค่า SHA-256 ประกอบการเทียบ
 
 ## วิธีอ่านอักขระและเครื่องหมาย

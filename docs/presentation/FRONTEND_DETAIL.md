@@ -1,5 +1,9 @@
 # คู่มือ HTML, Jinja และ CSS ทุกบรรทัด — CodeMind กลุ่ม 6
 
+**รายละเอียดปัจจุบัน:** อ่าน [สารบัญแยกรายไฟล์](current/README.md) โดยมี [home.html](current/files/templates/home.html.md), [page1.html](current/files/templates/page1.html.md), [page2.html](current/files/templates/page2.html.md), [page3.html](current/files/templates/page3.html.md), [team.html](current/files/templates/team.html.md), [_task_card.html](current/files/templates/_task_card.html.md) และ [style.css](current/files/static/style.css.md)
+
+> **เอกสารประวัติฉบับแรก:** HTML/CSS ในเอกสารนี้เป็นก่อนปรับปรุง 30 กันยายน 2569 หน้าปัจจุบันมีการ์ดแนะนำ งานย่อย ประวัติ และข้อมูลภาระทีมเพิ่มแล้ว อ่าน [UPGRADE_DETAILS.md](UPGRADE_DETAILS.md) และเปิดไฟล์ template จริงประกอบ
+
 เอกสารเพื่อให้นักศึกษาปี 1 ทบทวนและตอบคำถามอาจารย์ อ่านจากไฟล์จริงวันที่ 29 กันยายน 2026 รวมบรรทัดว่าง แยก HTML ทุกแท็ก ทุก attribute และ Jinja ทุกคำสั่ง ส่วน CSS แยกทุก selector และ declaration พร้อมค่าจริง ไม่ได้แก้แอปหรือรันชุดทดสอบในการจัดทำเอกสารนี้ และไม่ใช่การรับรองความปลอดภัยระดับระบบใช้งานจริง
 
 ## วิธีอ่าน

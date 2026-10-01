@@ -1,0 +1,60 @@
+{% macro row_fields(item) %}
+<input type="hidden" name="no" value="{{ item.no }}">
+<input type="hidden" name="version" value="{{ item.version }}">
+{% endmacro %}
+
+{% macro quick_actions(item, page_name) %}
+<div class="deadline-quick-actions">
+  {% if item.remaining_hours > 0 %}
+    {% if item.status == 'ยังไม่เริ่ม' %}
+    <form method="post" action="{{ url_for('page', name=page_name) }}">
+      {{ row_fields(item) }}<input type="hidden" name="action" value="start">
+      <button class="btn" type="submit">▶ เริ่มงานนี้</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{ url_for('page', name=page_name) }}">
+      {{ row_fields(item) }}<input type="hidden" name="action" value="complete">
+      <button class="btn ghost" type="submit">✓ ทำเครื่องหมายว่าเสร็จแล้ว</button>
+    </form>
+    <a class="deadline-action-link" href="{{ url_for('page', name='page2') }}#task-{{ item.no }}">บันทึกเวลา / งานย่อย →</a>
+  {% else %}
+    {% if item.details.before_complete is defined %}
+    <form method="post" action="{{ url_for('page', name=page_name) }}">
+      {{ row_fields(item) }}<input type="hidden" name="action" value="reopen">
+      <button class="btn ghost" type="submit">↻ เปิดกลับมาทำต่อ</button>
+    </form>
+    {% endif %}
+    <a class="deadline-action-link" href="{{ url_for('page', name='page2') }}#task-{{ item.no }}">ดูงานย่อย / แก้ไขข้อมูล →</a>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro task_card(item, page_name) %}
+<article class="deadline-task">
+  <div class="deadline-task-main">
+    <span class="deadline-course">{{ item.course }} · ความสำคัญ{{ item.priority_label }}</span>
+    <h3>{{ item.title }}</h3>
+    <p class="deadline-meta">ส่ง <time datetime="{{ item.due_date }}">{{ item.due_date }}</time> · เหลือ {{ "{:,.1f}".format(item.remaining_hours) }} ชั่วโมง · {{ item.owner_name }}</p>
+    <div class="deadline-badge-row">
+      <span class="badge {{ item.tone }}"><span aria-hidden="true">{{ item.status_icon }}</span> {{ item.status }}</span>
+      {% if item.remaining_hours > 0 %}<span class="badge {{ item.deadline_tone }}"><span aria-hidden="true">{{ item.deadline_icon }}</span> {{ item.deadline_label }}</span>{% endif %}
+      {% if item.subtask_count %}<span class="badge">งานย่อย {{ item.subtask_done }}/{{ item.subtask_count }}</span>{% endif %}
+    </div>
+    <div class="progress deadline-progress" role="progressbar" aria-label="ความคืบหน้า {{ item.title }}" aria-valuenow="{{ item.progress }}" aria-valuemin="0" aria-valuemax="100"><div style="width: {{ item.progress }}%"></div></div>
+    <p class="note">{{ item.progress }}% จากชั่วโมงที่ทำแล้ว</p>
+    {% if item.remaining_hours > 0 %}
+    <p class="deadline-plan-detail">
+      {% if item.today_hours > 0 %}วันนี้ควรแบ่งให้ <strong>{{ "{:,.1f}".format(item.today_hours) }} ชั่วโมง</strong>
+      {% else %}เวลาที่แบ่งวันนี้ครบแล้ว ควรปรับเวลาว่างหรือเลื่อนงานลำดับถัดไป{% endif %}
+    </p>
+    <ul class="deadline-reasons">{% for reason in item.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  <div class="deadline-task-actions">
+    {{ quick_actions(item, page_name) }}
+    {% if item.remaining_hours > 0 and item.days_left >= 0 %}
+    <button class="deadline-text-button" type="button" data-calendar-title="{{ item.title }}" data-calendar-course="{{ item.course }}" data-calendar-date="{{ item.due_date }}">▣ เพิ่มลงปฏิทิน</button>
+    {% endif %}
+  </div>
+</article>
+{% endmacro %}

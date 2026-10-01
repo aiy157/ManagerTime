@@ -1,0 +1,215 @@
+{
+  "date": "2026-09-30",
+  "files": [
+    {
+      "source": "models.py",
+      "detail": "files/models.py.md",
+      "sha256": "f29d799be760ceeddac418fd3313fc5de5e6f9cc47b365444bae9571094422ba",
+      "lines": 450,
+      "characters": 15878,
+      "line_explanations": 450
+    },
+    {
+      "source": "pages/page1.py",
+      "detail": "files/pages/page1.py.md",
+      "sha256": "b7d6819c28320d2c2c5a15095ca69d36a2e765fac6f7ade01947f37fb0e3f6c8",
+      "lines": 23,
+      "characters": 777,
+      "line_explanations": 23
+    },
+    {
+      "source": "pages/page2.py",
+      "detail": "files/pages/page2.py.md",
+      "sha256": "074946470958f467465fbb85ca0cdfcc21e39bcd199c09eaa4e7e315a13f4fa6",
+      "lines": 173,
+      "characters": 7045,
+      "line_explanations": 173
+    },
+    {
+      "source": "pages/page3.py",
+      "detail": "files/pages/page3.py.md",
+      "sha256": "47306d89220b9dafd6f27ac47969ea044932d9d9fad856d87978ac688dcecfd0",
+      "lines": 38,
+      "characters": 1325,
+      "line_explanations": 38
+    },
+    {
+      "source": "pages/team.py",
+      "detail": "files/pages/team.py.md",
+      "sha256": "29d6c2d3dd3196c6aa1b37c57d1f41233314f6614028a8a0d9add6830bdef82a",
+      "lines": 64,
+      "characters": 2146,
+      "line_explanations": 64
+    },
+    {
+      "source": "templates/home.html",
+      "detail": "files/templates/home.html.md",
+      "sha256": "7f0f5c8caedfe79704fcdcafb3fe1066a3c978d9a2f93e929452751bba0edb97",
+      "lines": 17,
+      "characters": 1156,
+      "line_explanations": 17
+    },
+    {
+      "source": "templates/page1.html",
+      "detail": "files/templates/page1.html.md",
+      "sha256": "62df0224f14886762ac6143ed521ce346474d917d8795ad4fea8c33fdf707a65",
+      "lines": 82,
+      "characters": 4667,
+      "line_explanations": 82
+    },
+    {
+      "source": "templates/page2.html",
+      "detail": "files/templates/page2.html.md",
+      "sha256": "cba2da48f428606fc70cc26285b3ae4179b1a7513c1f3d3eb4e8781249f479d5",
+      "lines": 134,
+      "characters": 12644,
+      "line_explanations": 134
+    },
+    {
+      "source": "templates/page3.html",
+      "detail": "files/templates/page3.html.md",
+      "sha256": "16565dde747686bc4a663447c945273e084967e32bf806027bec3034b7646755",
+      "lines": 55,
+      "characters": 5138,
+      "line_explanations": 55
+    },
+    {
+      "source": "templates/team.html",
+      "detail": "files/templates/team.html.md",
+      "sha256": "65c0629dd1dce44dfa6582a8dd8c70dc77c99e8107cbef10d882dc1489a0bba1",
+      "lines": 38,
+      "characters": 3130,
+      "line_explanations": 38
+    },
+    {
+      "source": "templates/_task_card.html",
+      "detail": "files/templates/_task_card.html.md",
+      "sha256": "2c89502a22de0f2c61e5c53fe434a939fd6e3d1661564d0ed13500d6039ff92f",
+      "lines": 60,
+      "characters": 3432,
+      "line_explanations": 60
+    },
+    {
+      "source": "static/style.css",
+      "detail": "files/static/style.css.md",
+      "sha256": "f4b7b6ab83f12222136d98a7cd12e25e9e7325c25c3999dda531d488b6070084",
+      "lines": 359,
+      "characters": 26455,
+      "line_explanations": 359
+    },
+    {
+      "source": "static/js/forms.js",
+      "detail": "files/static/js/forms.js.md",
+      "sha256": "1e11f533d5c27e2e88eab61acb3c8b2b2dc83487e39e7ce33c2bd0a430db2bc2",
+      "lines": 62,
+      "characters": 2601,
+      "line_explanations": 62
+    },
+    {
+      "source": "static/js/reminders.js",
+      "detail": "files/static/js/reminders.js.md",
+      "sha256": "c55778563e6d78cc648e1cdb08c5323d3d5072100ea5ae670773af7d94fecc4a",
+      "lines": 153,
+      "characters": 6586,
+      "line_explanations": 153
+    },
+    {
+      "source": "data.json",
+      "detail": "files/data.json.md",
+      "sha256": "8de58894b4763ae0c8ce088b1096d6695773b861fbef8b2a019a45f27f0ee5df",
+      "lines": 114,
+      "characters": 2328,
+      "line_explanations": 114
+    },
+    {
+      "source": "data.sample.json",
+      "detail": "files/data.sample.json.md",
+      "sha256": "8de58894b4763ae0c8ce088b1096d6695773b861fbef8b2a019a45f27f0ee5df",
+      "lines": 114,
+      "characters": 2328,
+      "line_explanations": 114
+    },
+    {
+      "source": "team.json",
+      "detail": "files/team.json.md",
+      "sha256": "08a3ff548fe93720618fd6764cd75415a10d4ff04bf6300f094bbddfd9180427",
+      "lines": 14,
+      "characters": 685,
+      "line_explanations": 14
+    },
+    {
+      "source": "planner_settings.json",
+      "detail": "files/planner_settings.json.md",
+      "sha256": "a0bc114d67f9ed243593f9d6d4d479cfd0c6df2e944b0eb54f52215a503f9f82",
+      "lines": 3,
+      "characters": 23,
+      "line_explanations": 3
+    },
+    {
+      "source": "test_planner_features.py",
+      "detail": "files/test_planner_features.py.md",
+      "sha256": "a77f04500ea1ed11fa908af9641ace1a471ebcc0d242ec430966e840c36a3968",
+      "lines": 325,
+      "characters": 13377,
+      "line_explanations": 325
+    },
+    {
+      "source": "docs/qa/serve_fixture.py",
+      "detail": "files/docs/qa/serve_fixture.py.md",
+      "sha256": "2b18adc71201f76e75360644d0772b15fcaf6d3b4fb4ce832a05aac3f8b64667",
+      "lines": 43,
+      "characters": 1978,
+      "line_explanations": 43
+    },
+    {
+      "source": "docs/qa/test_reminders.cjs",
+      "detail": "files/docs/qa/test_reminders.cjs.md",
+      "sha256": "02975c5a1427c25a0eb222d4a035477bcd2746b494d6d5591f2b91b020aa7b57",
+      "lines": 97,
+      "characters": 4613,
+      "line_explanations": 97
+    },
+    {
+      "source": "PAGES.md",
+      "detail": "files/PAGES.md.md",
+      "sha256": "231b1e4c4c3ea4546470cd025ff70ebbf1074a92f6e1d873482d83bc0c7c7ee3",
+      "lines": 61,
+      "characters": 2703,
+      "line_explanations": 61
+    },
+    {
+      "source": "README.md",
+      "detail": "files/README.md.md",
+      "sha256": "5d1b2b5f242be741d478c94acb43671007aa891a5bf4f10e37a550219c32e57a",
+      "lines": 1,
+      "characters": 17,
+      "line_explanations": 1
+    },
+    {
+      "source": "check.bat",
+      "detail": "files/check.bat.md",
+      "sha256": "4066797dd0e410fb8ead9ce9e20676deab95100982781a1f1c8d1f97e6832345",
+      "lines": 10,
+      "characters": 269,
+      "line_explanations": 10
+    },
+    {
+      "source": "docs/qa/before_upgrade/data.json",
+      "detail": "files/docs/qa/before_upgrade/data.json.md",
+      "sha256": "74d01faf3a45a52d5f7a73d40c8593f4d49bf7d96e3d69e9d62e92dc873c17b1",
+      "lines": 9,
+      "characters": 875,
+      "line_explanations": 9
+    },
+    {
+      "source": "docs/qa/before_upgrade/data.sample.json",
+      "detail": "files/docs/qa/before_upgrade/data.sample.json.md",
+      "sha256": "74d01faf3a45a52d5f7a73d40c8593f4d49bf7d96e3d69e9d62e92dc873c17b1",
+      "lines": 9,
+      "characters": 875,
+      "line_explanations": 9
+    }
+  ],
+  "total_source_lines": 2508,
+  "questions": 100
+}

@@ -1,0 +1,610 @@
+{
+  "models.py": {
+    "title": "คลาสและกติกากลางของระบบ",
+    "owner": "นายวายุ ทาโสม · PM",
+    "purpose": "แทนงานหนึ่งชิ้นด้วย Assignment และรวมสูตร ลำดับงาน สถานะ ประวัติ และการเปลี่ยนสถานะที่ทุกหน้าใช้ร่วมกัน",
+    "input": "row งาน 7 field, สมาชิกจาก team.json, form ที่ app.py ส่งให้ และชั่วโมงว่างรายวัน",
+    "output": "ข้อมูลแสดงผลที่คำนวณแล้ว dict/list/tuple และข้อความผลการบันทึก; บางฟังก์ชันเขียน data.json หรือ settings",
+    "depends": [
+      "storage.py (อ่าน/เขียนงาน)",
+      "team.json (ข้อมูลสมาชิก)",
+      "planner_settings.json (งบรายวัน)",
+      "datetime, hashlib, json, math, os (standard library)"
+    ],
+    "steps": [
+      "สร้าง Assignment จาก field หลักและคำนวณ remaining/days/progress",
+      "สร้าง view ของงาน เติมเจ้าของ สถานะ ป้ายวันส่ง งานย่อย และ version",
+      "รวมภาระงานตามกำหนดส่ง หักเวลา work วันนี้ และตรวจเวลาไม่พอ",
+      "เรียงลำดับแล้วแบ่งเวลาวันนี้ไม่เกินงบคงเหลือ",
+      "แยก completed และนับสถิติพร้อม focus",
+      "ตรวจ version ของฟอร์มก่อนเปลี่ยนสถานะและบันทึก",
+      "รวม history แบบแยกชั่วโมงทำจริงจากเหตุการณ์อื่น"
+    ],
+    "cautions": [
+      "dict(row) สำเนาระดับบน; details_of ใช้ JSON round trip เพื่อคัดลอกข้อมูลซ้อนที่เป็น JSON",
+      "ไม่มี permanent ID สำหรับงาน; no เป็นตำแหน่งเริ่ม 0 และ SHA ตรวจเนื้อหาเดิม",
+      "hash ไม่ใช่ login, CSRF token หรือ file lock; JSON พร้อมกันหลาย process ยังอาจเขียนทับ",
+      "progress เป็นยอด done_hours จึงรวมผลปิดงานตามประมาณ ส่วน actual_total รวม work เท่านั้น",
+      "ceil_tenth ใช้ epsilon เล็กน้อยเพื่อลดผลคลาดเคลื่อน float; ความเสี่ยงตัดสินจาก raw_gap",
+      "selection loop และการรวมภาระมีลักษณะ O(n²) เหมาะกับข้อมูลขนาดเล็กในรายวิชา"
+    ]
+  },
+  "pages/page1.py": {
+    "title": "Python ของหน้า Overview",
+    "owner": "นางสาวลักขณา ศรีโพธิ์ · Page 1",
+    "purpose": "เตรียมภาพรวมและข้อมูลขั้นต่ำสำหรับเตือน พร้อมส่งคำสั่งเริ่ม/ปิด/เปิดกลับไปยังฟังก์ชันกลาง",
+    "input": "งานจาก storage.load() และชั่วโมงจาก models.load_daily_hours(); POST form",
+    "output": "context สำหรับ page1.html พร้อม reminder_tasks; handle คืนข้อความ",
+    "depends": [
+      "models.overview",
+      "storage.load",
+      "models.quick_action",
+      "templates/page1.html",
+      "static/js/reminders.js"
+    ],
+    "steps": [
+      "build อ่านงานกับค่าชั่วโมงและเรียก overview",
+      "วนเฉพาะรายการ pending เพื่อสร้าง reminder_tasks 6 ค่า",
+      "เติมข้อมูลเตือนใน context แล้วคืน dict",
+      "handle อนุญาต start/complete/reopen และปฏิเสธ action อื่น"
+    ],
+    "cautions": [
+      "ไม่มี route หรือ request ในไฟล์นี้ app.py จัดการให้",
+      "reminder_tasks ไม่ส่ง details/history/รหัสสมาชิกทั้งหมด",
+      "ฟอร์มใช้ version ผ่าน macro; ไม่ควรรับตำแหน่งอย่างเดียว"
+    ]
+  },
+  "pages/page2.py": {
+    "title": "Python ของหน้าจัดการงาน",
+    "owner": "นายไกรวิชญ์ บุ้งทอง · Page 2",
+    "purpose": "ตรวจและบันทึกการเพิ่ม แก้ ลบ ชั่วโมงจริง และงานย่อย พร้อมเตรียมประวัติให้หน้า Manage",
+    "input": "ข้อมูลปัจจุบัน สมาชิก form และวันที่เครื่อง",
+    "output": "context ของ page2.html หรือข้อความสำเร็จ/ผิดพลาด; รายการงานที่ผ่านตรวจถูกเขียนด้วย storage.save",
+    "depends": [
+      "models.overview",
+      "models.read_number/read_date",
+      "models.row_index/record_history",
+      "storage.load/save",
+      "templates/page2.html"
+    ],
+    "steps": [
+      "build เตรียม all_items, count, members, today, history, actual_total และ daily_history",
+      "check ตรวจข้อความ วันที่ เวลา priority และ owner ก่อนสร้าง 7 field",
+      "save_assignment รักษาประวัติเดิมและบันทึกส่วนต่างเป็น adjustment",
+      "log_time เพิ่มชั่วโมงจริงของครั้งนั้นและเพิ่มประวัติ work",
+      "change_subtask เพิ่มหรือติ๊กขั้นตอนโดยไม่เพิ่มชั่วโมง",
+      "handle แยก action และตรวจ no/version ก่อนแตะรายการเดิม"
+    ],
+    "cautions": [
+      "เบราว์เซอร์ช่วยตรวจแต่ Python เป็นด่านที่ห้ามข้าม",
+      "เปลี่ยนวันส่งเป็นอดีตต้อง acknowledge_past=yes; วันส่งเดิมที่ผ่านแล้วแก้ข้อมูลอื่นได้",
+      "delete ลบงานพร้อมงานย่อยและประวัติของงานนั้น ไม่มีถังขยะ",
+      "form มาจาก HTTP เป็นข้อความ; แปลงตัวเลขก่อนใช้",
+      "แก้ยอดสะสมไม่เท่ากับเวลาทำจริงรายวัน; ต้องเลือก log_time สำหรับการทำครั้งใหม่"
+    ]
+  },
+  "pages/page3.py": {
+    "title": "Python ของหน้า Plan",
+    "owner": "นายธีรเดช ฤทธิ์คำรพ · Page 3 / QA",
+    "purpose": "รับค่าชั่วโมงที่บันทึกไว้หรือค่าทดลองจาก URL เตรียมแผน และบันทึกงบเวลาให้ใช้ร่วมกับ Overview",
+    "input": "query dict, form ของ save_hours/quick action, งาน และ settings",
+    "output": "tasks ตามวันส่ง, required_daily, daily_shortfall, notice และ context กลาง",
+    "depends": [
+      "models.load_daily_hours/daily_hours/save_daily_hours",
+      "models.overview/order_items/ceil_tenth",
+      "storage.load",
+      "templates/page3.html"
+    ],
+    "steps": [
+      "อ่านชั่วโมงที่บันทึกเป็นค่าเริ่มต้น",
+      "หากมี hours ใน URL ตรวจค่า; ไม่ถูกต้องใช้ค่าเดิมและ notice",
+      "overview คำนวณแผน จากนั้นเรียง tasks ตาม deadline",
+      "หาค่าสูงสุดของ hours_per_day เฉพาะวันส่งที่ยังไม่ผ่าน",
+      "handle save_hours ตรวจ 0.1–12 แล้วเขียน settings; quick action ใช้ฟังก์ชันกลาง"
+    ],
+    "cautions": [
+      "ค่า GET hours ใช้ในรอบแสดง ไม่เขียนไฟล์; ปุ่ม POST บันทึกจึงเปลี่ยนค่าที่ทุกหน้าอ่าน",
+      "required_daily ไม่บวกค่าเฉลี่ยทุกงานเพราะจะนับภาระซ้ำ",
+      "ถ้ามีแต่งานเกินกำหนด required_daily เป็น 0 แต่งานเหล่านั้นยังขึ้นเกินกำหนด"
+    ]
+  },
+  "pages/team.py": {
+    "title": "Python ของหน้าทีม",
+    "owner": "ทีม CodeMind · อ่านข้อมูลบทบาทจริงจาก team.json",
+    "purpose": "รวมงานของสมาชิกตาม owner และตรวจงานไม่มอบหมาย/ภาระงานมาก",
+    "input": "team.json, data.json และเกณฑ์ชั่วโมงเดียวที่ตั้งใน Plan",
+    "output": "group, members ที่เติมสถิติ, count, unassigned, daily_hours และ weekly_capacity",
+    "depends": [
+      "models.team_data/all_views/annotate_plan",
+      "storage.load",
+      "templates/team.html"
+    ],
+    "steps": [
+      "initial_of ตัดคำนำหน้าที่รู้จักและดึงอักขระแรก",
+      "member_summary คัดงานที่ owner ตรง id",
+      "รวมชั่วโมงและคำนวณ progress แบบถ่วงตาม estimated_hours",
+      "ตรวจความเสี่ยงเฉพาะงานคนนั้นและเทียบงบ 7 วัน",
+      "build วนทุกคนและคัด pending ที่ไม่รู้จัก owner"
+    ],
+    "cautions": [
+      "เกณฑ์รายวันเดียวกันใช้กับทุกคน ยังไม่มีตารางว่างรายคน",
+      "ความคืบหน้าเป็นยอดชั่วโมงประมาณ/ทำแล้ว ไม่ใช่การประเมินคุณภาพหรือคะแนนสมาชิก",
+      "member_summary คืน assignments ทั้งเสร็จและค้าง; unassigned นับเฉพาะค้าง",
+      "own_tasks เป็นค่ารับกลับจาก annotate_plan ที่ไม่ได้ใช้ต่อ; risks ใช้ตัดสิน overloaded"
+    ]
+  },
+  "templates/home.html": {
+    "title": "HTML/Jinja ของหน้าแรก",
+    "owner": "ภาพรวมโครงการ",
+    "purpose": "แนะนำหัวข้อและทางลัดไปภาพรวม จัดการงาน และแผน",
+    "input": "context กลางจาก app.py และแม่แบบ base.html",
+    "output": "หน้าแรกเมื่อเปิด /",
+    "depends": [
+      "templates/base.html (เดิม ห้ามแก้)",
+      "static/style.css",
+      "url_for('page', name=...)"
+    ],
+    "steps": [
+      "extends base และเปิด block content",
+      "แสดงหัวข้อ คำอธิบาย และปุ่มเข้า Overview",
+      "แสดงการ์ดทางลัด 3 หน้า",
+      "ปิด block เพื่อให้ base ประกอบหน้าเต็ม"
+    ],
+    "cautions": [
+      "ไม่มี index.html ในโครงการ; route / ใช้ home.html จริง",
+      "เลข 28 ในภาพปฏิทินเป็นข้อความตกแต่ง ไม่ใช่วันที่หรือจำนวนงาน",
+      "ไม่มี build ของ home และไม่มีการคำนวณงานในไฟล์นี้"
+    ]
+  },
+  "templates/page1.html": {
+    "title": "HTML/Jinja ของ Overview",
+    "owner": "นางสาวลักขณา ศรีโพธิ์ · Page 1",
+    "purpose": "แสดงงานวันนี้ เหตุผล สถิติ งานค้าง งานเสร็จ และจุดควบคุมการเตือน",
+    "input": "context จาก pages/page1.py และ macro _task_card.html",
+    "output": "หน้า Overview ที่มีฟอร์ม POST และ JSON สำหรับ JavaScript",
+    "depends": [
+      "base.html",
+      "_task_card.html: task_card/quick_actions",
+      "static/js/reminders.js",
+      "static/style.css"
+    ],
+    "steps": [
+      "แสดงเวลาที่ตั้ง ทำจริงวันนี้ และงบเหลือ",
+      "แสดงสถิติและเตือนงานเกินกำหนด/หลายงานใกล้ส่ง",
+      "วน recommendations เป็นการ์ดแนะนำ",
+      "วน items เป็นงานค้าง และ completed เป็นหมวดเสร็จ",
+      "ฝัง reminder_tasks ผ่าน tojson และโหลด reminders.js ด้วย defer"
+    ],
+    "cautions": [
+      "tojson เปลี่ยนข้อมูลเป็น JSON ที่เหมาะกับการฝังใน HTML; ไม่ใช้ safe กับชื่อผู้ใช้",
+      "else ของ for ใช้เมื่อรายการว่าง แตกต่างจาก else ของ if",
+      "กรณีงบวันนี้หมดแต่ยัง pending ต้องอ่านคำอธิบายให้ตรง ไม่ใช่งานเสร็จหมด",
+      "การดึงข้อมูลเตือนใหม่ยังไม่แทนการ์ดทั้งหน้าทันที"
+    ]
+  },
+  "templates/page2.html": {
+    "title": "HTML/Jinja ของ Manage",
+    "owner": "นายไกรวิชญ์ บุ้งทอง · Page 2",
+    "purpose": "จัดฟอร์มงาน ชี้ความหมายชั่วโมง ทำงานย่อย และแสดงประวัติที่แยกประเภท",
+    "input": "items, members, today, history, actual_total และ daily_history จาก page2.build",
+    "output": "ฟอร์ม add/update/delete/log_time/add_subtask/toggle_subtask และแสดงข้อมูล",
+    "depends": [
+      "base.html",
+      "_task_card.html: row_fields/quick_actions",
+      "static/js/forms.js",
+      "static/style.css"
+    ],
+    "steps": [
+      "ฟอร์มเพิ่มงานพร้อม help, priority, owner และงานย่อย",
+      "วนงานและใช้ no สร้าง id ของการ์ด/ช่อง",
+      "details ยุบส่วนบันทึกเวลา งานย่อย และแก้ข้อมูล",
+      "ทุกการกระทำรายการเดิมมี hidden no/version/action",
+      "วนสรุปวันและตาราง history พร้อมกรอบเลื่อน",
+      "โหลด forms.js เพื่อช่วยตรวจและเปิดการ์ดตาม hash"
+    ],
+    "cautions": [
+      "name คือ key ใน form; id ใช้ label/JavaScript และต้องไม่ซ้ำ",
+      "hidden เป็นข้อมูลที่ยังแก้จากผู้ใช้ได้ จึงต้องตรวจฝั่ง Python",
+      "required/min/max/step เป็นการตรวจเบราว์เซอร์ ไม่แทน backend",
+      "งานเสร็จจากการบันทึกชั่วโมงจนครบอาจมีงานย่อยไม่ถูกติ๊ก จึงแสดงค่าจริง",
+      "ฟอร์ม edit ปรับยอดรวม; log_time เพิ่มยอดครั้งนี้"
+    ]
+  },
+  "templates/page3.html": {
+    "title": "HTML/Jinja ของ Plan",
+    "owner": "นายธีรเดช ฤทธิ์คำรพ · Page 3",
+    "purpose": "ทำให้ผู้ใช้เทียบเวลาที่ต้องทำ มีจริง และขาดได้โดยไม่คำนวณเอง",
+    "input": "tasks, focus, required_daily, daily_shortfall, daily_hours และสถิติจาก page3.build",
+    "output": "แบบบันทึกเวลาว่าง สรุปความเสี่ยง และการ์ดแผนตามวันส่ง",
+    "depends": [
+      "base.html",
+      "_task_card.html: quick_actions",
+      "pages/page3.py",
+      "static/style.css"
+    ],
+    "steps": [
+      "POST save_hours ไป /page3 ชัดเจน",
+      "แสดงสถิติและคำแนะนำจาก daily_shortfall",
+      "แสดง focus พร้อมปุ่มเริ่ม/ปิด",
+      "วน tasks และแยกกำหนดยังไม่ผ่านกับเกินกำหนด",
+      "แสดง 3 ตัวเลขต่อวันและข้อมูลสะสม/ความจุ/ขาดรวม",
+      "อธิบายสมมติฐานรวมวันนี้และหักชั่วโมงจริงแล้ว"
+    ],
+    "cautions": [
+      "Jinja ใช้ตัวเลขที่ Python คำนวณ ไม่เขียนสูตรภาระสะสมใหม่ใน template",
+      "focus อาจมี today_hours=0 หากงบวันนี้หมด ต้องอ่านงบร่วม",
+      "ค่าเฉลี่ยสรุปอนาคตไม่ใช่คำแนะนำให้ทำเกินเวลาว่างโดยอัตโนมัติ"
+    ]
+  },
+  "templates/team.html": {
+    "title": "HTML/Jinja ของ Team",
+    "owner": "ทีม CodeMind",
+    "purpose": "แสดงสมาชิกตามข้อมูลจริงพร้อมจำนวนงาน ความคืบหน้า และสิ่งที่ต้องช่วยแบ่ง",
+    "input": "group, members, count, unassigned, daily_hours, weekly_capacity",
+    "output": "การ์ดสมาชิกและรายการงานที่ยังไม่มอบหมาย",
+    "depends": [
+      "pages/team.py",
+      "base.html",
+      "static/style.css",
+      "ลิงก์ไป page2#task-no"
+    ],
+    "steps": [
+      "แสดงชื่อกลุ่มและอธิบายเกณฑ์ภาระ",
+      "วนสมาชิกพร้อม role/task ตามรายวิชา",
+      "แสดงสถิติ progress และป้ายช่วยแบ่งงาน",
+      "details แสดงงานที่แต่ละคนรับผิดชอบ",
+      "วน unassigned พร้อมปุ่มมอบหมายไป Manage"
+    ],
+    "cautions": [
+      "ปุ่มมอบหมายเป็นทางลัด ไม่บันทึกผู้รับผิดชอบทันที",
+      "บทบาทในรายวิชาจาก team.json ต่างจาก owner ของงานแต่ละชิ้น",
+      "progressbar ใช้ตัวเลข 0–100 ที่ Python เตรียมแล้ว"
+    ]
+  },
+  "templates/_task_card.html": {
+    "title": "Macro ฟอร์มและการ์ดร่วม",
+    "owner": "ส่วนร่วมของทุกหน้า",
+    "purpose": "ลดโค้ดปุ่มและการ์ดที่ซ้ำ พร้อมให้ทุกหน้าส่ง no/version ด้วยกติกาเดียวกัน",
+    "input": "item ข้อมูล view และ page_name หน้าเป้าหมาย",
+    "output": "ชิ้น HTML ของ row_fields, quick_actions และ task_card",
+    "depends": [
+      "models.task_view/overview",
+      "url_for",
+      "CSS ของการ์ดและปุ่ม"
+    ],
+    "steps": [
+      "row_fields สร้าง hidden no และ version",
+      "quick_actions แสดงเริ่มเฉพาะยังไม่เริ่ม ปิดสำหรับ pending และเปิดกลับเฉพาะเคยกดปิด",
+      "task_card แสดงชื่อ เจ้าของ ชั่วโมง ป้าย progress เหตุผล และปุ่มปฏิทิน"
+    ],
+    "cautions": [
+      "เป็นส่วนที่ import ใช้ ไม่ใช่หน้า route จึงไม่ extends base",
+      "item ของ task_card ต้องมี today_hours/reasons ในกรณี pending ซึ่ง overview เตรียมไว้",
+      "ปุ่มปฏิทินมี dataset ต้องมี reminders.js ในหน้าที่ใช้งานจึงดาวน์โหลดได้"
+    ]
+  },
+  "static/style.css": {
+    "title": "CSS เดิมและส่วนที่เพิ่มสำหรับโครงการ",
+    "owner": "นายไกรวิชญ์ บุ้งทอง · Frontend / ส่วนร่วม",
+    "purpose": "กำหนดสี ฟอนต์ การ์ด ฟอร์ม ปุ่ม การเปรียบเทียบเวลา และหน้าจอมือถือ",
+    "input": "element/class/attribute ใน HTML และขนาด viewport",
+    "output": "รูปแบบการแสดงผล ไม่แก้ data.json หรือสูตร",
+    "depends": [
+      "HTML ทุกหน้า",
+      "CSS custom properties ใน :root"
+    ],
+    "steps": [
+      "ส่วนเดิมกำหนดสีและ component ของ skeleton",
+      "ส่วนหลัง marker your own styles below เพิ่มรูปแบบ Deadline Compass",
+      "ชุด v2 เพิ่มงานวันนี้ quick actions งานย่อย ประวัติ และภาระทีม",
+      "@media 720/640 ปรับจากหลายคอลัมน์เป็นแนวตั้ง",
+      "กำหนด focus-visible และขนาดสัมผัสขั้นต่ำ 44px"
+    ],
+    "cautions": [
+      "อธิบายทุกบรรทัดเพื่ออ่านภาพรวม แต่ส่วนก่อน marker เป็นของเดิม ไม่อ้างว่าเราเขียนทั้งหมด",
+      "CSS ซ้ำ selector เดิมอาจ override เฉพาะ property ตามลำดับและ specificity",
+      "Sarabun/Noto Sans Thai ใน font stack ไม่รับประกันว่าติดตั้งจริง; ไม่มีการโหลดฟอนต์ภายนอก",
+      "[hidden] มี display:none เฉพาะข้อความบางกลุ่มเพื่อไม่ให้รูปแบบ flex ทำให้แสดงโดยไม่ตั้งใจ",
+      "ตารางเลื่อนเฉพาะกรอบ ไม่ซ่อน overflow ทั้งหน้าเพื่อกลบปัญหา"
+    ]
+  },
+  "static/js/forms.js": {
+    "title": "JavaScript ช่วยตรวจและใช้งานฟอร์ม",
+    "owner": "ส่วนติดต่อผู้ใช้ของ Manage",
+    "purpose": "แจ้งช่องผิดทันที ช่วยยืนยันวันส่งอดีต เติมงานย่อย และเปิดการ์ดจากลิงก์",
+    "input": "DOM ของ form, dataset.today/originalDate, ค่าช่อง และ location.hash",
+    "output": "สถานะ validation, aria-invalid, ข้อความเตือน และการเปิด details ในเบราว์เซอร์",
+    "depends": [
+      "templates/page2.html",
+      "Browser DOM/Constraint Validation API",
+      "ไม่มี package ภายนอก"
+    ],
+    "steps": [
+      "ผูกแต่ละ data-assignment-form กับ validate",
+      "ตรวจ trim ชื่อ/วิชา ยอดชั่วโมง และวันส่งที่เปลี่ยนเป็นอดีต",
+      "ผูก input/invalid/submit กับข้อความและการตรวจ",
+      "เติมขั้นตอนตัวอย่าง 6 ข้อเมื่อกดปุ่ม",
+      "openLinkedTask เปิดรายละเอียดการ์ดจาก #task-no และเลื่อนถึง"
+    ],
+    "cautions": [
+      "JavaScript ไม่เขียน JSON ของงาน และปิด JS แล้วยังมี Python ตรวจ",
+      "ฟอร์มมีชื่อ input ที่โค้ดคาดไว้ เปลี่ยน name ต้องแก้ทั้งสองส่วน",
+      "focus/scrollIntoView เปลี่ยนตำแหน่งอ่าน ไม่ใช่เปลี่ยนงานในไฟล์"
+    ]
+  },
+  "static/js/reminders.js": {
+    "title": "JavaScript แจ้งเตือนและไฟล์ปฏิทิน",
+    "owner": "Overview / ระบบเตือน",
+    "purpose": "เลือกงานที่ต้องเตือน ดึงข้อมูลใหม่ ลดการซ้ำ และสร้าง .ics",
+    "input": "JSON reminder-data, สิทธิ์ Notification, localStorage, หน้า Overview และ dataset ปุ่มปฏิทิน",
+    "output": "Notification/ข้อความสถานะ/ลิงก์โหลดข้อมูลใหม่ และไฟล์ .ics",
+    "depends": [
+      "templates/page1.html",
+      "Browser Notification, fetch, DOMParser, AbortController, Blob, URL"
+    ],
+    "steps": [
+      "อ่าน JSON และตรวจความสามารถ/สิทธิ์",
+      "filter pending ที่ใกล้ส่ง/ค้าง/เสี่ยง/ทำวันนี้/ไม่อัปเดต",
+      "จำ signature ตามวันและสร้าง Notification เมื่อควรเตือน",
+      "poll ทุก 60000 ms และ visibilitychange; ตัด fetch ที่ 10000 ms",
+      "สร้าง VCALENDAR/VEVENT/VALARM กิจกรรมทั้งวันและดาวน์โหลด",
+      "ล้าง object URL หลังดาวน์โหลด"
+    ],
+    "cautions": [
+      "เมื่อปิดหน้า/โปรแกรม Python ไม่มีการเตือนเว็บต่อ ไม่ใช่ service worker/push",
+      "daysUntil ใช้ปี/เดือน/วันของเบราว์เซอร์แล้วแปลง UTC เพื่อเปรียบเทียบระดับวัน",
+      "signature ไม่ใช่ SHA/รหัสผ่าน และไม่รวมชั่วโมงทศนิยมทุกครั้ง",
+      "เมื่อดึงใหม่ข้อมูลเตือนเปลี่ยน แต่รายการ DOM เดิมไม่ถูกแทนเอง",
+      "ICS เตือนก่อน 1 วันเป็นคำขอที่แอปนำเข้าต้องรองรับ; กดซ้ำอาจสร้างกิจกรรมซ้ำ"
+    ]
+  },
+  "data.json": {
+    "title": "ข้อมูลใช้งานจริง",
+    "owner": "ข้อมูลร่วมของทุกหน้า",
+    "purpose": "เก็บงานที่หน้า Manage บันทึกและทุกหน้าอ่าน",
+    "input": "รายการที่ผ่าน Python validation",
+    "output": "JSON list ของ dict งาน 7 field",
+    "depends": [
+      "storage.py",
+      "models.Assignment",
+      "ทุกหน้า"
+    ],
+    "steps": [
+      "array ระดับบนเก็บหนึ่ง object ต่อหนึ่งงาน",
+      "field หลักเก็บชื่อ วิชา วัน และชั่วโมง",
+      "priority เก็บค่าระดับความสำคัญ",
+      "details เก็บ owner, started, subtasks, history และวันกิจกรรม"
+    ],
+    "cautions": [
+      "ตัวอย่างปัจจุบัน 7 งาน เหลือรวม 29 ชั่วโมง; ค่า due/stats เปลี่ยนตามวันเครื่อง",
+      "owner/history ว่างตามข้อมูลจริง ไม่สร้างการทำงานย้อนหลัง",
+      "การบันทึกเขียนทั้งไฟล์ ไม่ใช่ transaction ของฐานข้อมูล"
+    ]
+  },
+  "data.sample.json": {
+    "title": "ข้อมูลตัวอย่างสำหรับคืนค่า",
+    "owner": "ข้อมูลสำรองตั้งต้น",
+    "purpose": "เป็นต้นทางที่ storage.reset คืน data.json ระหว่างตรวจ",
+    "input": "ชุดตัวอย่างที่ตั้งใจเก็บเป็น baseline",
+    "output": "งานตัวอย่าง 7 field เช่นเดียวกับ data.json",
+    "depends": [
+      "storage.reset",
+      "check_project.py"
+    ],
+    "steps": [
+      "อ่าน schema เช่นเดียวกับ data.json",
+      "ตัวตรวจอาจใช้ไฟล์นี้คัดลอกทับข้อมูลปัจจุบัน"
+    ],
+    "cautions": [
+      "sample ไม่ใช่ backup อัตโนมัติของงานล่าสุด",
+      "ก่อน check.bat ต้องสำรอง data.json แยกไฟล์ และคืนหลังตรวจ",
+      "ขณะจัดเอกสารนี้ data กับ sample เท่ากัน ไม่แปลว่าจะเท่ากันหลังผู้ใช้เพิ่มงาน"
+    ]
+  },
+  "team.json": {
+    "title": "ชื่อกลุ่ม สมาชิก และหน้าที่รายวิชา",
+    "owner": "สมาชิก CodeMind ทั้ง 4 คน",
+    "purpose": "เก็บชื่อกลุ่ม/หัวข้อและข้อมูลสมาชิกที่ใช้หัวเว็บ เมนูทีม และรายการเลือก owner",
+    "input": "ชื่อและบทบาทที่ผู้ใช้ให้",
+    "output": "object มี group และ members",
+    "depends": [
+      "app.py inject_globals",
+      "models.team_data",
+      "pages/team.py",
+      "pages/page2.py"
+    ],
+    "steps": [
+      "group เก็บ name/section/topic/description",
+      "members เก็บ name/id/role/task คนละ object",
+      "รหัสสมาชิกเป็น string ใช้จับคู่ owner"
+    ],
+    "cautions": [
+      "task เป็นหน้าที่ในโครงงานรายวิชา ไม่ใช่รายการการบ้านที่แอปบันทึก",
+      "การมีชื่อใน JSON ไม่ได้พิสูจน์ว่าแต่ละคนมี commit แล้ว ต้องดู git log",
+      "ไม่สร้างบัญชีหรือสิทธิ์ login จากรหัสนักศึกษา"
+    ]
+  },
+  "planner_settings.json": {
+    "title": "งบเวลาว่างรายวัน",
+    "owner": "ผู้ใช้ตั้งจากหน้า Plan",
+    "purpose": "จำค่า daily_hours ข้ามการเปิดหน้าและการเริ่มโปรแกรมใหม่",
+    "input": "POST save_hours ที่ตรวจ finite และช่วง 0.1–12",
+    "output": "object หนึ่งค่า daily_hours",
+    "depends": [
+      "models.load_daily_hours/save_daily_hours",
+      "page1/page3/team"
+    ],
+    "steps": [
+      "อ่านค่า JSON และตรวจอีกครั้ง",
+      "ถ้าหาย/ผิดใช้ 2 ชั่วโมง",
+      "เมื่อผู้ใช้บันทึกจึงเขียนไฟล์ใหม่"
+    ],
+    "cautions": [
+      "ไม่มีตารางรายวัน/วันหยุดหรือค่าแยกรายสมาชิก",
+      "ชั่วโมงนี้คือกำลังทำงานของแผน ไม่ใช่เวลาที่ทำจริงใน history"
+    ]
+  },
+  "test_planner_features.py": {
+    "title": "ชุดทดสอบธุรกิจเพิ่มเติม",
+    "owner": "นายธีรเดช ฤทธิ์คำรพ · QA / ส่วนร่วม",
+    "purpose": "ตรวจกรณีข้อมูลผิด สถานะ สูตร งานย่อย ประวัติ ทีม และฟอร์มเก่าโดยไม่แตะงานจริง",
+    "input": "ข้อมูลจำลองจาก task/add_form และ isolated fixture",
+    "output": "assert ผ่าน/ไม่ผ่านเมื่อใช้ pytest",
+    "depends": [
+      "pytest ที่มีอยู่แล้ว",
+      "Flask test client",
+      "tmp_path/monkeypatch",
+      "models/storage/pages"
+    ],
+    "steps": [
+      "isolated เปลี่ยนตำแหน่ง data/sample/settings ไปพื้นที่ชั่วคราว",
+      "helper สร้างงาน วันส่งสัมพันธ์กับวันนี้ และ form พร้อม version",
+      "parameter ทดสอบข้อมูลผิดหลายค่าจากฟังก์ชันเดียว",
+      "assert เทียบค่าที่คาดจากสูตรและการเปลี่ยนสถานะ",
+      "รวมกับ test_pages.py เดิมในการรัน pytest"
+    ],
+    "cautions": [
+      "มี list comprehension/decorator ใน test helper ซึ่งไม่ใช่ไฟล์นักศึกษาที่ให้คะแนน pages/models",
+      "test client ไม่ใช่การทดสอบภาพเบราว์เซอร์หรือ Notification จริง",
+      "ผลล่าสุดใน QA_REPORT 42 รวมของอาจารย์ 4 + เพิ่ม 38 กรณี ไม่ใช่ 42 ชื่อ def"
+    ]
+  },
+  "docs/qa/serve_fixture.py": {
+    "title": "เว็บสาธิตด้วยข้อมูลชั่วคราว",
+    "owner": "QA",
+    "purpose": "เปิดแอปจริงพอร์ต 5002 แต่แยก data/sample/settings สำหรับทดลองกดปุ่ม",
+    "input": "schema ของงาน สมาชิกจริงจาก team.json และวันที่เครื่อง",
+    "output": "Flask local demo ที่ http://127.0.0.1:5002/page1",
+    "depends": [
+      "app/models/storage",
+      "tempfile/pathlib standard library"
+    ],
+    "steps": [
+      "หาตำแหน่ง root และเพิ่มให้ import app ได้",
+      "สร้าง TemporaryDirectory และเปลี่ยน path ใน process ทดสอบ",
+      "เติมงานค้าง งานวันนี้ งานใหญ่ งานเสร็จ และงานย่อยตัวอย่าง",
+      "บันทึก settings 4 ชั่วโมงและเปิด server debug=False"
+    ],
+    "cautions": [
+      "ไม่เปลี่ยนตัวแปรของ server อีก process ที่พอร์ต 5000/5001",
+      "ต้องหยุด server เดิมที่ 5002 ก่อนรันซ้ำ",
+      "เป็นเว็บสาธิตชั่วคราวไม่ใช่สคริปต์ deploy"
+    ]
+  },
+  "docs/qa/test_reminders.cjs": {
+    "title": "ชุดทดสอบ JavaScript ด้วยส่วนจำลอง",
+    "owner": "QA",
+    "purpose": "ตรวจเกณฑ์เตือน การดึงข้อมูลใหม่ การไม่ซ้ำ ข้อจำกัดสิทธิ์ และข้อความ ICS",
+    "input": "reminders.js และ DOM/Notification/fetch จำลองใน vm",
+    "output": "Node test ผ่าน/ไม่ผ่าน 4 กรณี",
+    "depends": [
+      "node:test/node:assert/node:vm/node:fs/node:path (built-in)"
+    ],
+    "steps": [
+      "อ่าน source แล้วสร้าง harness ที่ใช้เวลาอ้างอิงคงที่",
+      "จำลอง window/document/localStorage/fetch และ Notification",
+      "รัน source ใน context จำลอง",
+      "assert เกณฑ์ pending และ signature เมื่อ polling",
+      "assert DTSTART/DTEND ข้ามเดือนและ escape ข้อความ"
+    ],
+    "cautions": [
+      "ไม่เปิด browser และไม่ขอสิทธิ์ OS จริง",
+      "ใช้ Node ที่มีอยู่แล้ว ไม่ติดตั้ง dependency เพื่อรันแอป",
+      "FixedDate ใน test เป็นวันที่ควบคุม ไม่ใช่วันที่ของแอปจริง"
+    ]
+  },
+  "PAGES.md": {
+    "title": "แผนแบ่งหน้าที่และความคืบหน้า",
+    "owner": "กลุ่ม CodeMind",
+    "purpose": "ระบุหัวข้อ field เจ้าของหน้า และรายการตรวจ/ส่งงาน",
+    "input": "การแบ่งงานและหลักฐานการตรวจที่ทำจริง",
+    "output": "Markdown checklist ให้ทีมและอาจารย์อ่าน",
+    "depends": [
+      "PROJECT.md",
+      "team.json",
+      "ผลตรวจและ git log"
+    ],
+    "steps": [
+      "ระบุเจ้าของ page1–3 และ models",
+      "ติ๊กความสามารถ/ตรวจที่สำเร็จ",
+      "คงรายการ commit/push และทุกคนใน git log เป็นยังไม่ยืนยัน",
+      "เชื่อมคู่มือปัจจุบันและอธิบายการสำรองก่อนตัวตรวจ"
+    ],
+    "cautions": [
+      "[x] ในเอกสารเป็นบันทึก ไม่ใช่ข้อพิสูจน์ในตัว ต้องอ้างผลตรวจจริง",
+      "ไม่ติ๊ก commit ของคนที่ยังไม่มีหลักฐาน"
+    ]
+  },
+  "README.md": {
+    "title": "README ระดับ repository",
+    "owner": "ข้อมูลเดิมของ repository",
+    "purpose": "ปัจจุบันมีเพียงข้อความชื่อ ManagerTime ไม่ใช่คู่มือใช้งานเต็ม",
+    "input": "ข้อความคงที่เดิม",
+    "output": "ข้อความที่แสดงหน้า repository",
+    "depends": [],
+    "steps": [
+      "เป็นเอกสารข้อความ ไม่ถูก app.py โหลดมาเป็นหน้าเว็บ"
+    ],
+    "cautions": [
+      "บรรทัดปัจจุบันมีเครื่องหมายคำพูดและ # อยู่ภายในข้อความ จึงไม่ควรกล่าวว่าเป็น index ของเว็บ",
+      "คู่มือหลักปัจจุบันคือ PROJECT.md และชุด current นี้"
+    ]
+  },
+  "check.bat": {
+    "title": "ตัวเรียกตรวจของอาจารย์ (อ่านประกอบ ไม่ได้แก้)",
+    "owner": "อาจารย์ให้; ธีรเดชเป็นผู้ใช้ตรวจ",
+    "purpose": "รันตัวตรวจคะแนนและ pytest ด้วย Python ใน .venv",
+    "input": "โปรเจกต์ในโฟลเดอร์เดียวกับสคริปต์",
+    "output": "คะแนน/คำเตือนและผล pytest ใน terminal",
+    "depends": [
+      ".venv/Scripts/python.exe",
+      "check_project.py",
+      "test_pages.py/test_planner_features.py"
+    ],
+    "steps": [
+      "ตั้ง terminal UTF-8 และย้ายไปโฟลเดอร์สคริปต์",
+      "ตรวจว่ามี virtual environment",
+      "เรียก check_project.py จากนั้น pytest -q",
+      "pause ให้ผู้ใช้ดูผล"
+    ],
+    "cautions": [
+      "ไม่ได้รัน Node test_reminders.cjs ให้อัตโนมัติ",
+      "ตัวตรวจ Python คืน data.json จาก sample จึงต้องสำรองก่อน",
+      "ชื่อสมาชิกที่ดูแล check.bat ไม่ได้แปลว่าเป็นผู้เขียนสคริปต์เดิม"
+    ]
+  },
+  "docs/qa/before_upgrade/data.json": {
+    "title": "สำเนางานก่อนเพิ่ม field",
+    "owner": "QA / สำรองก่อนปรับปรุง",
+    "purpose": "เก็บข้อมูลเดิม 5 field เพื่อเทียบว่าไม่เปลี่ยนชื่อ วัน และชั่วโมงตอนเพิ่มคุณสมบัติ",
+    "input": "data.json ก่อน migration",
+    "output": "snapshot ก่อนเพิ่ม priority/details",
+    "depends": [
+      "data.json ปัจจุบันเพื่อเปรียบเทียบ"
+    ],
+    "steps": [
+      "มีงานเดิม 7 รายการ",
+      "แต่ละงานเก็บเฉพาะ title/course/due_date/estimated_hours/done_hours"
+    ],
+    "cautions": [
+      "ไม่ใช่ไฟล์ที่ app โหลดขณะใช้งาน",
+      "หากคืน snapshot จะเป็น schema 5 field ซึ่งโค้ดยังอ่านได้ แต่รายละเอียดใหม่จะหาย"
+    ]
+  },
+  "docs/qa/before_upgrade/data.sample.json": {
+    "title": "สำเนา sample ก่อนเพิ่ม field",
+    "owner": "QA / สำรองก่อนปรับปรุง",
+    "purpose": "เก็บ sample 5 field เดิมเป็นหลักฐานการเพิ่มโครงสร้าง",
+    "input": "data.sample.json ก่อน migration",
+    "output": "snapshot ของข้อมูลคืนค่าเดิม",
+    "depends": [
+      "data.sample.json ปัจจุบัน"
+    ],
+    "steps": [
+      "อ่านรูปแบบเดียวกับ snapshot data เดิม"
+    ],
+    "cautions": [
+      "ไม่ใช่ SAMPLE_FILE ที่ storage ใช้ในขณะรันจริง"
+    ]
+  }
+}

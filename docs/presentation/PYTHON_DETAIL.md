@@ -1,5 +1,9 @@
 # คำอธิบาย Python ทุกบรรทัด
 
+**รายละเอียดปัจจุบัน:** อ่าน [สารบัญแยกรายไฟล์](current/README.md) หรือ [models.py ฉบับปัจจุบัน](current/files/models.py.md), [page1.py](current/files/pages/page1.py.md), [page2.py](current/files/pages/page2.py.md), [page3.py](current/files/pages/page3.py.md) และ [team.py](current/files/pages/team.py.md) พร้อม [แนวคำถามซ้อมตอบ](current/TEACHER_QUESTIONS.md)
+
+> **เอกสารประวัติฉบับแรก:** เลขบรรทัดด้านล่างอ้างอิง source ก่อนปรับปรุง 30 กันยายน 2569 สูตรและฟังก์ชันปัจจุบันอยู่ใน [UPGRADE_DETAILS.md](UPGRADE_DETAILS.md) กรุณาเทียบกับไฟล์จริงก่อนอ้างบรรทัดระหว่างนำเสนอ
+
 เอกสารนี้อธิบาย source จริงของ models.py และ page1.py ถึง page3.py ครบทุก physical line รวมบรรทัดว่าง เลขบรรทัดและ SHA-256 ผูกกับไฟล์ ณ วันที่จัดทำ เมื่อแก้โค้ดภายหลังให้ถือคำอธิบายเลขบรรทัดเป็นฉบับเก่าจนกว่าจะปรับตาม
 
 ## โครงสร้าง

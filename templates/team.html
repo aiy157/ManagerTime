@@ -1,27 +1,38 @@
 {% extends "base.html" %}
-{# templates/team.html — the team page. Basic layout given; fill team.json, then make it yours. #}
 {% block content %}
-<h1>{{ group.name }} <small class="muted">· {{ group.section }}</small></h1>
-<p class="lead">{{ group.topic }} — {{ group.description }}</p>
-
-<h2>สมาชิก ({{ count }} คน)</h2>
-<div class="member-grid">
-  {% for m in members %}
-  <div class="member">
-    <div class="avatar">{{ m.initial }}</div>
-    <div class="member-name">{{ m.name }}</div>
-    <div class="muted">{{ m.id }}</div>
-    <div class="role">{{ m.role }}</div>
-    <div class="task">{{ m.task }}</div>
-  </div>
+<div class="deadline-page-title"><span class="deadline-eyebrow">ทีมและภาระงาน</span><h1>{{ group.name }} <small class="muted">· {{ group.section }}</small></h1><p class="lead">{{ group.topic }} — {{ group.description }}</p></div>
+<div class="deadline-insight">ดูความคืบหน้าตามชั่วโมงของแต่ละคน และมอบหมายงานจากหน้าจัดการงาน <a href="{{ url_for('page', name='page2') }}">จัดผู้รับผิดชอบ →</a></div>
+<p class="note">ใช้เวลาว่าง {{ daily_hours }} ชั่วโมง/วันเป็นเกณฑ์เดียวกันสำหรับสมาชิกทุกคน เกณฑ์ให้ช่วยแบ่งงาน: มีงานเสี่ยงตามกำหนด หรือชั่วโมงค้างมากกว่า {{ weekly_capacity }} ชั่วโมงใน 7 วัน</p>
+<h2>สมาชิก {{ count }} คน</h2>
+<div class="member-grid deadline-member-grid">
+  {% for member in members %}
+  <article class="member deadline-member">
+    <div class="avatar" aria-hidden="true">{{ member.initial }}</div>
+    <h3 class="member-name">{{ member.name }}</h3><div class="muted">{{ member.id }}</div>
+    <div class="role">{{ member.role }}</div><p class="task">หน้าที่รายวิชา: {{ member.task }}</p>
+    <div class="deadline-member-stats">
+      <div><strong>{{ member.assignment_count }}</strong><span>งานทั้งหมด</span></div>
+      <div><strong>{{ member.open_count }}</strong><span>งานค้าง</span></div>
+      <div><strong>{{ member.remaining_hours }}</strong><span>ชม.ที่เหลือ</span></div>
+    </div>
+    <div class="progress deadline-progress" role="progressbar" aria-label="ความคืบหน้า {{ member.name }}" aria-valuenow="{{ member.progress }}" aria-valuemin="0" aria-valuemax="100"><div style="width: {{ member.progress }}%"></div></div>
+    <p class="note">ความคืบหน้า {{ member.progress }}% ตามชั่วโมงทั้งหมด</p>
+    {% if member.overloaded %}<p class="deadline-member-warning">! ควรช่วยแบ่งงาน{% if member.risk_count %} · มี {{ member.risk_count }} งานเสี่ยง{% endif %}</p>
+    {% elif member.open_count %}<span class="badge good">✓ ภาระงานอยู่ในเกณฑ์</span>
+    {% else %}<span class="badge">○ ไม่มีงานค้างที่มอบหมาย</span>{% endif %}
+    <details><summary>งานที่รับผิดชอบ ({{ member.assignment_count }})</summary><ul class="deadline-member-tasks">
+      {% for task in member.assignments %}<li><a href="{{ url_for('page', name='page2') }}#task-{{ task.no }}">{{ task.title }}</a><small>{{ task.status_icon }} {{ task.status }} · {{ task.progress }}%</small></li>
+      {% else %}<li class="note">ยังไม่มีงานที่มอบหมาย</li>{% endfor %}
+    </ul></details>
+  </article>
   {% endfor %}
 </div>
-
-<h2>ตารางงาน</h2>
-<table>
-  <tr><th>ชื่อ</th><th>รหัส</th><th>บทบาท</th><th>งานที่รับผิดชอบ</th></tr>
-  {% for m in members %}
-  <tr><td>{{ m.name }}</td><td>{{ m.id }}</td><td>{{ m.role }}</td><td>{{ m.task }}</td></tr>
-  {% endfor %}
-</table>
+<section aria-labelledby="unassigned-heading">
+  <h2 id="unassigned-heading">○ งานที่ยังไม่มีผู้รับผิดชอบ ({{ unassigned|length }})</h2>
+  <div class="deadline-task-list">
+    {% for task in unassigned %}
+    <article class="deadline-task"><div class="deadline-task-main"><span class="deadline-course">{{ task.course }}</span><h3>{{ task.title }}</h3><p class="deadline-meta">ส่ง {{ task.due_date }} · เหลือ {{ task.remaining_hours }} ชั่วโมง</p></div><a class="btn ghost" href="{{ url_for('page', name='page2') }}#task-{{ task.no }}">มอบหมายงาน →</a></article>
+    {% else %}<p class="empty">✓ งานค้างทุกชิ้นมีผู้รับผิดชอบแล้ว</p>{% endfor %}
+  </div>
+</section>
 {% endblock %}

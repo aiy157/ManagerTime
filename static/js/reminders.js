@@ -1,11 +1,14 @@
-// Browser reminders while the dashboard is open, plus calendar files for later alerts.
+// Reminders refresh from the existing Overview page while it remains open.
 const reminderData = document.getElementById("reminder-data");
 const reminderButton = document.getElementById("enable-reminders");
 const reminderStatus = document.getElementById("reminder-status");
+const refreshNotice = document.getElementById("reminder-refresh");
 
 if (reminderData && reminderButton && reminderStatus) {
-  const tasks = JSON.parse(reminderData.textContent);
+  let tasks = JSON.parse(reminderData.textContent);
   let lastShownKey = "";
+  let refreshing = false;
+  const originalData = JSON.stringify(tasks);
 
   function daysUntil(dateText) {
     const parts = dateText.split("-").map(Number);
@@ -22,58 +25,97 @@ if (reminderData && reminderButton && reminderStatus) {
   }
 
   function updateStatus() {
+    reminderButton.disabled = false;
     if (!("Notification" in window) || !window.isSecureContext) {
-      reminderStatus.textContent = "เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนในหน้านี้";
+      reminderStatus.textContent = "หน้านี้ไม่รองรับการแจ้งเตือน ใช้ไฟล์ปฏิทินได้";
       reminderButton.disabled = true;
     } else if (Notification.permission === "granted") {
-      reminderStatus.textContent = "เปิดแล้ว · เตือนเมื่อหน้านี้เปิดอยู่";
+      reminderStatus.textContent = "เปิดแล้ว · ตรวจงานใหม่ทุกนาทีขณะเปิดหน้านี้";
       reminderButton.textContent = "🔔 เปิดการแจ้งเตือนแล้ว";
     } else if (Notification.permission === "denied") {
-      reminderStatus.textContent = "เบราว์เซอร์ปิดกั้นการแจ้งเตือน โปรดเปลี่ยนในการตั้งค่าเว็บไซต์";
+      reminderStatus.textContent = "สิทธิ์ถูกปิดกั้น เปลี่ยนได้ในการตั้งค่าเว็บไซต์";
       reminderButton.disabled = true;
     } else {
-      reminderStatus.textContent = "กดเพื่ออนุญาตให้เบราว์เซอร์เตือน";
+      reminderStatus.textContent = "อนุญาตเพื่อเตือนงานวันนี้ งานใกล้ส่ง และแผนเสี่ยง";
     }
   }
 
   function checkReminders() {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
-    const urgent = tasks.filter((task) => task.remaining_hours > 0 && daysUntil(task.due_date) <= 3);
-    if (urgent.length === 0) return;
+    const urgent = tasks.filter((task) => task.remaining_hours > 0 &&
+      (daysUntil(task.due_date) <= 3 || task.at_risk || task.today_hours > 0 || task.stale));
+    if (!urgent.length) return;
+    const signature = JSON.stringify(urgent.map((task) => [task.title, task.due_date,
+      Boolean(task.at_risk), Boolean(task.stale), task.today_hours > 0]));
     const key = "deadline-reminder-" + todayKey();
-    if (lastShownKey === key) return;
+    if (lastShownKey === key + signature) return;
     try {
-      if (localStorage.getItem(key) === "shown") return;
-    } catch (_) {
-      // The notification can still appear if browser storage is unavailable.
-    }
-    const body = urgent.length === 1
-      ? urgent[0].title + " · ส่ง " + urgent[0].due_date
-      : "มี " + urgent.length + " งานที่ใกล้ส่งหรือเกินกำหนด · เริ่มจาก " + urgent[0].title;
+      if (localStorage.getItem(key) === signature) return;
+    } catch (_) { /* Daily reminders still work in this tab without storage. */ }
+
+    const overdue = urgent.filter((task) => daysUntil(task.due_date) < 0).length;
+    const risk = urgent.filter((task) => task.at_risk).length;
+    const stale = urgent.filter((task) => task.stale).length;
+    const reasons = [];
+    if (overdue) reasons.push("เกินกำหนด " + overdue + " งาน");
+    if (risk) reasons.push("แผนเสี่ยง " + risk + " งาน");
+    if (stale) reasons.push("ยังไม่ได้อัปเดต " + stale + " งาน");
+    const body = "วันนี้เริ่มจาก " + urgent[0].title +
+      (reasons.length ? " · " + reasons.join(" · ") : " · มีงานใกล้ส่งหรือแบ่งไว้ทำวันนี้");
     try {
-      const notification = new Notification("ตรวจเดดไลน์วันนี้", { body });
+      const notification = new Notification("ตรวจแผนงานวันนี้", { body });
       notification.onclick = () => window.focus();
-      lastShownKey = key;
-      try { localStorage.setItem(key, "shown"); } catch (_) { /* storage is optional */ }
+      lastShownKey = key + signature;
+      try { localStorage.setItem(key, signature); } catch (_) { /* optional */ }
     } catch (_) {
-      reminderStatus.textContent = "เบราว์เซอร์ไม่สามารถแสดงการแจ้งเตือนได้";
+      reminderStatus.textContent = "แสดงการเตือนไม่ได้ โปรดตรวจสิทธิ์และการตั้งค่าอุปกรณ์";
+    }
+  }
+
+  async function refreshTasks() {
+    if (refreshing) return;
+    refreshing = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await fetch(window.location.pathname, {
+        cache: "no-store", signal: controller.signal
+      });
+      if (!response.ok) return;
+      const html = new DOMParser().parseFromString(await response.text(), "text/html");
+      const data = html.getElementById("reminder-data");
+      if (!data) return;
+      const next = JSON.parse(data.textContent);
+      if (!Array.isArray(next)) return;
+      tasks = next;
+      if (refreshNotice) refreshNotice.hidden = JSON.stringify(tasks) === originalData;
+      updateStatus();
+      checkReminders();
+    } catch (_) {
+      // Keep the last data if the local server is temporarily unavailable.
+    } finally {
+      window.clearTimeout(timeout);
+      refreshing = false;
     }
   }
 
   reminderButton.addEventListener("click", async () => {
-    if (!("Notification" in window)) return;
+    if (!("Notification" in window) || !window.isSecureContext) return;
     try {
       await Notification.requestPermission();
       updateStatus();
+      await refreshTasks();
       checkReminders();
     } catch (_) {
-      reminderStatus.textContent = "ไม่สามารถขออนุญาตแจ้งเตือนได้ในเบราว์เซอร์นี้";
+      reminderStatus.textContent = "ไม่สามารถขอสิทธิ์ได้ ใช้ไฟล์ปฏิทินแทน";
     }
   });
-
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshTasks();
+  });
   updateStatus();
   checkReminders();
-  window.setInterval(checkReminders, 60000);
+  window.setInterval(refreshTasks, 60000);
 }
 
 function escapeCalendarText(value) {

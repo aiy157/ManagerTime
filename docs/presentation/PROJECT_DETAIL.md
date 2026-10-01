@@ -1,5 +1,17 @@
 # PROJECT DETAIL — เดดไลน์ไม่ชนกัน
 
+## คู่มือปัจจุบันสำหรับนำเสนอ
+
+- [สารบัญรายละเอียดแยกครบ 26 ไฟล์](current/README.md)
+- [รายละเอียดรวม พร้อมโค้ดและคำอธิบายครบ 2,508 บรรทัด](current/PROJECT_DETAIL_ALL.md)
+- [คำถามที่อาจารย์อาจถาม พร้อมแนวคำตอบ 100 ข้อ](current/TEACHER_QUESTIONS.md)
+
+ชุด `current` อ้างอิงโค้ดปัจจุบันวันที่ 30 กันยายน 2569 และระบุหน้าที่ ลำดับทำงาน ฟังก์ชัน ตัวแปร และคำอธิบายรายบรรทัดแยกตามไฟล์ หน้าแรกของโครงการชื่อ `templates/home.html` ใช้แทนชื่อ `index.html` ในตัวอย่างคำขอ
+
+## คู่มือฉบับแรกสำหรับอ้างอิงย้อนหลัง
+
+> **ฉบับปัจจุบัน:** ระบบได้รับการปรับปรุงตามข้อเสนอ 14 ประการเมื่อ 30 กันยายน 2569 อ่าน [UPGRADE_DETAILS.md](UPGRADE_DETAILS.md), [ผังงานล่าสุด](FLOWCHARTS.md), [บทนำเสนอล่าสุด](PRESENTATION_SCRIPT.md) และ [คู่มือผู้ทดสอบล่าสุด](TESTER_SUMMARY.md) ก่อนใช้งาน เนื้อหาและเลขบรรทัดเดิมในคู่มือฉบับนี้เป็นประวัติของ source วันที่ 29 กันยายน ซึ่งยังไม่รวมสถานะใหม่ งานย่อย ประวัติ และการมอบหมาย
+
 **กลุ่ม:** CodeMind · กลุ่ม 6  
 **รายวิชา:** 1309102 การเขียนโปรแกรมคอมพิวเตอร์  
 **วันที่ตรวจ source เพื่อจัดทำเอกสาร:** 29 กันยายน 2569  
@@ -16,6 +28,7 @@
 | `PROJECT_DETAIL.md` | คู่มือรวมฉบับนี้ ตั้งแต่โจทย์ สถาปัตยกรรม การใช้งาน ไปถึง source รายบรรทัด |
 | `PRESENTATION_SCRIPT.md` | บทพูดเต็มประมาณ 7 นาที 15 วินาที บทสั้นประมาณ 4 นาที คำสั่งสาธิต และคำตอบคำถาม |
 | `FLOWCHARTS.md` | Mermaid 11 ผัง ครบหน้าแรก ทีม หน้า1–3 CRUD validation notification ปฏิทิน และการทดสอบ |
+| `TESTER_SUMMARY.md` | สรุปสำหรับธีรเดช: สูตรหน้า 3 กรณีทดสอบ ขั้นตอนตรวจ และบทพูด QA |
 | `PYTHON_DETAIL.md` | ภาคผนวก Python 230/230 บรรทัด |
 | `FRONTEND_DETAIL.md` | ภาคผนวก HTML/Jinja/CSS 375/375 บรรทัด |
 | `JAVASCRIPT_DATA_DETAIL.md` | ภาคผนวก JavaScript/JSON/PAGES/README 194/194 บรรทัด |
@@ -426,6 +439,7 @@ daily hours รับ 0 < ค่า ≤ 12 หากแปลงไม่ได�
 
 - บทพูด: [PRESENTATION_SCRIPT.md](PRESENTATION_SCRIPT.md)
 - ผังงาน: [FLOWCHARTS.md](FLOWCHARTS.md)
+- สรุปสำหรับผู้ทดสอบ: [TESTER_SUMMARY.md](TESTER_SUMMARY.md)
 - ภาค Python แยก: [PYTHON_DETAIL.md](PYTHON_DETAIL.md)
 - ภาค HTML/CSS แยก: [FRONTEND_DETAIL.md](FRONTEND_DETAIL.md)
 - ภาค JavaScript/ข้อมูลแยก: [JAVASCRIPT_DATA_DETAIL.md](JAVASCRIPT_DATA_DETAIL.md)

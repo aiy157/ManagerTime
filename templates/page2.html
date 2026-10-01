@@ -1,36 +1,134 @@
 {% extends "base.html" %}
+{% from "_task_card.html" import row_fields, quick_actions %}
 {% block content %}
-<div class="deadline-page-title"><span class="deadline-eyebrow">จัดการงาน</span><h1>เพิ่มงานและอัปเดตความคืบหน้า</h1><p class="lead">กรอกเวลาที่คาดว่าจะใช้ให้ใกล้เคียงจริง เพื่อให้หน้าแผนช่วยเตือนได้แม่นยำ</p></div>
-
+<div class="deadline-page-title">
+  <span class="deadline-eyebrow">จัดการงาน</span><h1>งานใหญ่เริ่มจากก้าวเล็ก ๆ</h1>
+  <p class="lead">กำหนดผู้รับผิดชอบ แบ่งงานย่อย และบันทึกเวลาที่ทำจริงในแต่ละวัน</p>
+</div>
 <div class="two-col deadline-form-layout">
-  <form method="post" class="panel deadline-add-form">
-    <h2>งานใหม่</h2>
-    <input type="hidden" name="action" value="add">
-    <div class="field"><label for="new-title">ชื่องาน</label><input id="new-title" name="title" maxlength="80" placeholder="เช่น รายงานการทดลอง" required></div>
-    <div class="field"><label for="new-course">วิชา</label><input id="new-course" name="course" maxlength="40" placeholder="เช่น ฟิสิกส์" required></div>
-    <div class="field"><label for="new-date">วันส่ง</label><input id="new-date" name="due_date" type="date" required></div>
-    <div class="field"><label for="new-hours">เวลาที่คาดว่าจะใช้ (ชั่วโมง)</label><input id="new-hours" name="estimated_hours" type="number" min="0.1" max="200" step="0.1" placeholder="เช่น 4" required></div>
+  <form method="post" class="panel deadline-add-form" data-assignment-form data-today="{{ today }}">
+    <h2>+ งานใหม่</h2><input type="hidden" name="action" value="add">
+    <p class="deadline-form-error" role="alert" hidden></p>
+    <div class="field">
+      <label for="new-title">ชื่องาน</label><input id="new-title" name="title" maxlength="80" placeholder="เช่น โครงงานเขียนโปรแกรม" aria-describedby="new-title-help" required>
+      <small id="new-title-help" class="deadline-help">ชื่อสั้นและชัดเจน ไม่เกิน 80 ตัวอักษร</small>
+    </div>
+    <div class="field">
+      <label for="new-course">วิชาที่เกี่ยวข้อง</label><input id="new-course" name="course" maxlength="40" placeholder="เช่น การเขียนโปรแกรม" aria-describedby="new-course-help" required>
+      <small id="new-course-help" class="deadline-help">ระบุชื่อวิชาเพื่อแยกงานแต่ละรายวิชา</small>
+    </div>
+    <div class="field">
+      <label for="new-date">วันส่งงาน</label><input id="new-date" name="due_date" type="date" aria-describedby="new-date-help" required>
+      <small id="new-date-help" class="deadline-help">วันที่ต้องส่งงาน หากผ่านไปแล้วต้องยืนยันว่าเป็นงานค้าง</small>
+    </div>
+    <label class="deadline-past-confirm" data-past-warning hidden><input type="checkbox" name="acknowledge_past" value="yes"> วันส่งผ่านไปแล้ว ยืนยันบันทึกเพื่อติดตามงานค้าง</label>
+    <div class="field">
+      <label for="new-hours">เวลาที่คาดว่าจะใช้ทั้งหมด (ชั่วโมง)</label><input id="new-hours" name="estimated_hours" type="number" min="0.1" max="200" step="0.1" placeholder="เช่น 4" aria-describedby="new-hours-help" required>
+      <small id="new-hours-help" class="deadline-help">เวลารวมทั้งงาน เช่น 4 ชั่วโมง รวมส่วนที่ทำไปแล้วด้วย</small>
+    </div>
+    <div class="field">
+      <label for="new-done">เวลาที่ทำไปแล้ว (ชั่วโมง)</label><input id="new-done" name="done_hours" type="number" min="0" max="200" step="0.1" value="0" aria-describedby="new-done-help" required>
+      <small id="new-done-help" class="deadline-help">ยอดรวมเดิม เช่น 1.5 ชั่วโมง หากยังไม่เริ่มให้ใส่ 0</small>
+    </div>
+    <div class="field">
+      <label for="new-priority">ความสำคัญ</label><select id="new-priority" name="priority"><option value="normal">ปกติ</option><option value="high">สูง</option><option value="low">ต่ำ</option></select>
+    </div>
+    <div class="field">
+      <label for="new-owner">ผู้รับผิดชอบ</label><select id="new-owner" name="owner"><option value="">ยังไม่มอบหมาย</option>{% for member in members %}<option value="{{ member.id }}">{{ member.name }}</option>{% endfor %}</select>
+    </div>
+    <details class="deadline-subtask-setup">
+      <summary>แบ่งเป็นงานย่อย (ไม่บังคับ)</summary>
+      <div class="field"><label for="new-subtasks">งานย่อย หนึ่งบรรทัดต่อหนึ่งรายการ</label><textarea id="new-subtasks" name="subtasks" rows="6" aria-describedby="new-subtasks-help" placeholder="วิเคราะห์ปัญหา&#10;ออกแบบระบบ&#10;เขียนโปรแกรม"></textarea><small id="new-subtasks-help" class="deadline-help">สูงสุด 30 รายการ ติ๊กงานย่อยแยกจากยอดชั่วโมง</small></div>
+      <button type="button" class="btn ghost" data-subtask-template="new-subtasks">ใช้ขั้นตอนโครงงาน 6 ข้อ</button>
+    </details>
     <button class="btn full" type="submit">บันทึกงาน</button>
   </form>
-
-  <div>
-    <div class="deadline-section-head"><div><h2>รายการที่บันทึก</h2><p class="note">{{ count }} งาน · เปิดแต่ละการ์ดเพื่อแก้ไข</p></div></div>
+  <section aria-labelledby="saved-heading">
+    <div class="deadline-section-head"><div><h2 id="saved-heading">รายการที่บันทึก</h2><p class="note">{{ count }} งาน · เปิดการ์ดเพื่อบันทึกเวลา แก้ไข และจัดการงานย่อย</p></div></div>
     {% for item in items %}
-    <article class="panel deadline-edit-card">
-      <div class="deadline-edit-heading"><div><span class="deadline-course">{{ item.course }}</span><h3>{{ item.title }}</h3><p class="deadline-meta">ส่ง {{ item.due_date }} · เหลือ {{ "{:,.1f}".format(item.remaining_hours) }} ชั่วโมง</p></div><span class="badge {{ 'good' if item.remaining_hours == 0 else 'gold' }}">{{ 'เสร็จแล้ว' if item.remaining_hours == 0 else 'กำลังทำ' }}</span></div>
-      <details>
-        <summary>แก้ไขงานหรือบันทึกชั่วโมงที่ทำแล้ว</summary>
-        <form method="post" class="deadline-edit-form">
-          <input type="hidden" name="action" value="update"><input type="hidden" name="no" value="{{ item.no }}">
-          <div class="field"><label for="title-{{ item.no }}">ชื่องาน</label><input id="title-{{ item.no }}" name="title" value="{{ item.title }}" maxlength="80" required></div>
-          <div class="field"><label for="course-{{ item.no }}">วิชา</label><input id="course-{{ item.no }}" name="course" value="{{ item.course }}" maxlength="40" required></div>
-          <div class="field-row"><div class="field"><label for="date-{{ item.no }}">วันส่ง</label><input id="date-{{ item.no }}" name="due_date" type="date" value="{{ item.due_date }}" required></div><div class="field"><label for="hours-{{ item.no }}">ชั่วโมงทั้งหมด</label><input id="hours-{{ item.no }}" name="estimated_hours" type="number" min="0.1" max="200" step="0.1" value="{{ item.estimated_hours }}" required></div><div class="field"><label for="done-{{ item.no }}">ทำแล้ว (ชั่วโมง)</label><input id="done-{{ item.no }}" name="done_hours" type="number" min="0" step="0.1" value="{{ item.done_hours }}" required></div></div>
-          <button class="btn small" type="submit">บันทึกการแก้ไข</button>
-        </form>
-        <form method="post" class="deadline-delete-form" onsubmit="return confirm('ต้องการลบงานนี้หรือไม่?')"><input type="hidden" name="action" value="delete"><input type="hidden" name="no" value="{{ item.no }}"><button class="btn danger small" type="submit">ลบงานนี้</button></form>
+    <article class="panel deadline-edit-card" id="task-{{ item.no }}">
+      <span class="deadline-course">{{ item.course }} · ความสำคัญ{{ item.priority_label }}</span>
+      <h3>{{ item.title }}</h3>
+      <p class="deadline-meta">ส่ง {{ item.due_date }} · เหลือ {{ "{:,.1f}".format(item.remaining_hours) }} ชั่วโมง · {{ item.owner_name }}</p>
+      <div class="deadline-badge-row"><span class="badge {{ item.tone }}"><span aria-hidden="true">{{ item.status_icon }}</span> {{ item.status }}</span>{% if item.remaining_hours > 0 %}<span class="badge {{ item.deadline_tone }}">{{ item.deadline_icon }} {{ item.deadline_label }}</span>{% endif %}<span class="badge">งานย่อย {{ item.subtask_done }}/{{ item.subtask_count }}</span></div>
+      {{ quick_actions(item, 'page2') }}
+      <details class="deadline-work-details">
+        <summary>บันทึกเวลา / งานย่อย / แก้ไขข้อมูล</summary>
+        {% if item.remaining_hours > 0 %}
+        <section class="deadline-work-section" aria-labelledby="log-heading-{{ item.no }}">
+          <h4 id="log-heading-{{ item.no }}">บันทึกเวลาที่ทำจริง</h4>
+          <form method="post" class="deadline-log-form">
+            {{ row_fields(item) }}<input type="hidden" name="action" value="log_time">
+            <div class="field-row">
+              <div class="field"><label for="work-date-{{ item.no }}">วันที่ทำงาน</label><input id="work-date-{{ item.no }}" name="work_date" type="date" value="{{ today }}" max="{{ today }}" required></div>
+              <div class="field"><label for="log-hours-{{ item.no }}">ชั่วโมงที่ทำในครั้งนี้</label><input id="log-hours-{{ item.no }}" name="hours" type="number" min="0.1" max="{{ item.remaining_hours }}" step="0.1" placeholder="เช่น 1.5" required></div>
+            </div>
+            <div class="field"><label for="log-note-{{ item.no }}">ทำอะไรไปบ้าง (ไม่บังคับ)</label><input id="log-note-{{ item.no }}" name="note" maxlength="120" placeholder="เช่น เขียนส่วนรับข้อมูลเสร็จแล้ว"></div>
+            <p class="note">เพิ่มจากยอดเดิม {{ item.done_hours }} ชั่วโมง ไม่ต้องกรอกยอดสะสมใหม่</p>
+            <button class="btn" type="submit">+ บันทึกเวลาครั้งนี้</button>
+          </form>
+        </section>
+        {% endif %}
+        <section class="deadline-work-section" aria-labelledby="subtask-heading-{{ item.no }}">
+          <h4 id="subtask-heading-{{ item.no }}">งานย่อย {{ item.subtask_done }}/{{ item.subtask_count }}</h4>
+          <ul class="deadline-subtask-list">
+            {% for subtask in item.details.subtasks %}
+            <li>
+              {% if item.remaining_hours > 0 %}
+              <form method="post">
+                {{ row_fields(item) }}<input type="hidden" name="action" value="toggle_subtask"><input type="hidden" name="subtask_no" value="{{ loop.index0 }}">
+                <button class="deadline-subtask-toggle {{ 'is-done' if subtask.done }}" type="submit" aria-pressed="{{ 'true' if subtask.done else 'false' }}"><span aria-hidden="true">{{ '✓' if subtask.done else '○' }}</span> {{ subtask.title }}</button>
+              </form>
+              {% else %}<span>{{ '✓' if subtask.done else '○' }} {{ subtask.title }}{% if not subtask.done %} · ยังไม่ได้ทำเครื่องหมาย{% endif %}</span>{% endif %}
+            </li>
+            {% else %}<li class="note">ยังไม่มีงานย่อย แบ่งขั้นตอนเล็ก ๆ เพื่อเริ่มได้ง่ายขึ้น</li>{% endfor %}
+          </ul>
+          {% if item.remaining_hours > 0 %}
+          <form method="post" class="deadline-subtask-add">
+            {{ row_fields(item) }}<input type="hidden" name="action" value="add_subtask">
+            <div class="field"><label for="subtask-{{ item.no }}">เพิ่มงานย่อย</label><input id="subtask-{{ item.no }}" name="subtask_title" maxlength="100" placeholder="เช่น ทดสอบระบบ" required></div>
+            <button class="btn ghost" type="submit">+ เพิ่มขั้นตอน</button>
+          </form>
+          {% endif %}
+          <p class="note">ติ๊กงานย่อยแล้วให้บันทึกเวลาที่ใช้แยกกัน เปอร์เซ็นต์หลักคำนวณจากชั่วโมง</p>
+        </section>
+        <section class="deadline-work-section" aria-labelledby="edit-heading-{{ item.no }}">
+          <h4 id="edit-heading-{{ item.no }}">แก้ไขข้อมูลงาน</h4>
+          <form method="post" class="deadline-edit-form" data-assignment-form data-today="{{ today }}" data-original-date="{{ item.due_date }}">
+            {{ row_fields(item) }}<input type="hidden" name="action" value="update">
+            <p class="deadline-form-error" role="alert" hidden></p>
+            <div class="field"><label for="title-{{ item.no }}">ชื่องาน</label><input id="title-{{ item.no }}" name="title" value="{{ item.title }}" maxlength="80" required></div>
+            <div class="field"><label for="course-{{ item.no }}">วิชาที่เกี่ยวข้อง</label><input id="course-{{ item.no }}" name="course" value="{{ item.course }}" maxlength="40" required></div>
+            <div class="field"><label for="date-{{ item.no }}">วันส่งงาน</label><input id="date-{{ item.no }}" name="due_date" type="date" value="{{ item.due_date }}" required></div>
+            <label class="deadline-past-confirm" data-past-warning hidden><input type="checkbox" name="acknowledge_past" value="yes"> ยืนยันเปลี่ยนวันส่งเป็นวันที่ผ่านไปแล้ว</label>
+            <div class="field-row">
+              <div class="field"><label for="hours-{{ item.no }}">เวลาที่คาดว่าจะใช้ทั้งหมด</label><input id="hours-{{ item.no }}" name="estimated_hours" type="number" min="0.1" max="200" step="0.1" value="{{ item.estimated_hours }}" aria-describedby="hours-help-{{ item.no }}" required><small id="hours-help-{{ item.no }}" class="deadline-help">ชั่วโมงรวมทั้งงาน รวมส่วนที่ทำแล้ว</small></div>
+              <div class="field"><label for="done-{{ item.no }}">เวลาที่ทำไปแล้วทั้งหมด</label><input id="done-{{ item.no }}" name="done_hours" type="number" min="0" max="{{ item.estimated_hours }}" step="0.1" value="{{ item.done_hours }}" aria-describedby="done-help-{{ item.no }}" required><small id="done-help-{{ item.no }}" class="deadline-help">ปรับยอดสะสมเดิม ใช้ “บันทึกเวลา” ด้านบนสำหรับการทำงานครั้งใหม่</small></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="priority-{{ item.no }}">ความสำคัญ</label><select id="priority-{{ item.no }}" name="priority">{% for value, label in [('high','สูง'),('normal','ปกติ'),('low','ต่ำ')] %}<option value="{{ value }}" {{ 'selected' if item.priority == value }}>{{ label }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="owner-{{ item.no }}">ผู้รับผิดชอบ</label><select id="owner-{{ item.no }}" name="owner"><option value="">ยังไม่มอบหมาย</option>{% for member in members %}<option value="{{ member.id }}" {{ 'selected' if item.details.owner == member.id }}>{{ member.name }}</option>{% endfor %}</select></div>
+            </div>
+            <button class="btn" type="submit">บันทึกการแก้ไข</button>
+          </form>
+        </section>
+        <form method="post" class="deadline-delete-form" onsubmit="return confirm('ลบงานนี้พร้อมงานย่อยและประวัติหรือไม่?')">{{ row_fields(item) }}<input type="hidden" name="action" value="delete"><button class="btn danger" type="submit">ลบงานนี้</button></form>
       </details>
     </article>
     {% else %}<div class="empty">ยังไม่มีงานที่บันทึกไว้</div>{% endfor %}
-  </div>
+  </section>
 </div>
+
+<section class="deadline-history-section" aria-labelledby="history-heading">
+  <div class="deadline-section-head"><div><h2 id="history-heading">ประวัติการทำงาน</h2><p class="note">ชั่วโมงทำจริงที่บันทึก {{ actual_total }} ชั่วโมง · การปรับยอดและการกดปิดงานแสดงแยกประเภท</p></div></div>
+  {% if history %}
+  {% if daily_history %}<div class="deadline-daily-history">{% for day in daily_history %}<div class="panel"><time datetime="{{ day.date }}">{{ day.date }}</time><strong>{{ day.hours }} ชั่วโมง</strong><span class="note">บันทึกเวลาจริง {{ day.count }} ครั้ง</span></div>{% endfor %}</div>{% endif %}
+  <div class="deadline-table-scroll" tabindex="0" role="region" aria-label="ประวัติการทำงาน เลื่อนแนวนอนเพื่อดูครบ">
+    <table><thead><tr><th>วันที่</th><th>งาน / ผู้รับผิดชอบ</th><th class="num">ชั่วโมง</th><th>ประเภท / หมายเหตุ</th></tr></thead><tbody>
+      {% for entry in history %}<tr><td><time datetime="{{ entry.date }}">{{ entry.date }}</time></td><td>{{ entry.title }}<br><small>{{ entry.owner_name }}</small></td><td class="num">{{ "{:,.1f}".format(entry.hours) }}</td><td>{{ entry.label }}{% if entry.note %}<br><small>{{ entry.note }}</small>{% endif %}</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  {% else %}<div class="empty">เริ่มบันทึกเวลาของงาน แล้วประวัติรายวันจะแสดงที่นี่ ยอดเดิมที่ไม่มีวันที่จะไม่ถูกสร้างเป็นประวัติย้อนหลัง</div>{% endif %}
+</section>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/forms.js') }}" defer></script>{% endblock %}
