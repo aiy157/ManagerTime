@@ -1,8 +1,8 @@
 # รายละเอียดรวมทุกไฟล์ — โค้ดปัจจุบัน
 
-เดดไลน์ไม่ชนกัน · CodeMind กลุ่ม 6 · 30 กันยายน 2569 (2026-09-30)
+เดดไลน์ไม่ชนกัน · CodeMind กลุ่ม 6 · 1 ตุลาคม 2569 (2026-10-01)
 
-เอกสารนี้รวมบทจากคู่มือรายไฟล์ครบ 26 ไฟล์ จำนวน 2508 บรรทัดจริง ไม่แก้โค้ดเพื่อประกอบเอกสาร เริ่มอ่านตามส่วนรับผิดชอบ หากเอกสารยาวเกินควรใช้ [สารบัญแยกรายไฟล์](README.md)
+เอกสารนี้รวมบทจากคู่มือรายไฟล์ครบ 26 ไฟล์ จำนวน 2709 บรรทัดจริง ไม่แก้โค้ดเพื่อประกอบเอกสาร เริ่มอ่านตามส่วนรับผิดชอบ หากเอกสารยาวเกินควรใช้ [สารบัญแยกรายไฟล์](README.md)
 
 ## ภาพรวมการเดินทางของข้อมูล
 
@@ -61,6 +61,8 @@ flowchart LR
 
 ใช้ JSON ในเครื่อง ไม่มี login/database transaction/permanent task ID/service worker/push สถานะทีมไม่ใช่หลักฐาน commit ใช้ SHA ตรวจฟอร์มเก่าแต่ไม่มี file lock การแจ้งเตือนทำงานขณะเปิด Overview และ server
 
+เมื่อโฟลเดอร์โครงการอ่านอย่างเดียว configure_storage เลือกพื้นที่ชั่วคราวสำหรับข้อมูลและ settings พร้อมข้อความแจ้งผู้ใช้ หรือใช้ DEADLINE_DATA_DIR ที่ผู้ดูแลกำหนด ข้อมูลชั่วคราวบน serverless ไม่รับประกันข้าม instance/การเริ่มระบบใหม่ อ่าน [คู่มือ deployment](../../DEPLOYMENT.md)
+
 ## เอกสารและภาพที่สร้าง/ปรับปรุงประกอบโครงการ
 
 | รายการ | หน้าที่ |
@@ -71,6 +73,8 @@ flowchart LR
 | PRESENTATION_SCRIPT.md | บทพูดแยกสมาชิก |
 | FLOWCHARTS.md | ผังงาน GET/POST และแต่ละหน้า |
 | docs/qa/QA_REPORT.md | ผลตรวจและขอบเขตที่ยังไม่ยืนยัน |
+| docs/DEPLOYMENT.md | สาเหตุ EROFS รูปแบบพื้นที่จัดเก็บ และข้อจำกัดบนโฮสต์ |
+| .gitignore | เพิ่ม runtime-data/ เพื่อไม่ส่งข้อมูล runtime ตัวอย่างเข้า Git |
 | docs/qa/overview-desktop.jpg, overview-mobile.jpg | ภาพจากข้อมูลตัวอย่างจริง |
 | docs/qa/overview-mobile-fixture.jpg, history-mobile-fixture.jpg | ภาพจากข้อมูลทดสอบชั่วคราว |
 | study_metadata.json, study_symbols.json, study_questions.json | แหล่งคำอธิบาย/คำถามที่เขียนประกอบ source สำหรับสร้างชุดนี้ |
@@ -120,33 +124,36 @@ flowchart LR
 
 ## models.py — คลาสและกติกากลางของระบบ
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 450 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 500 physical lines (รวมบรรทัดว่าง)
 
-**SHA-256 ของไฟล์จริง:** `f29d799be760ceeddac418fd3313fc5de5e6f9cc47b365444bae9571094422ba`
+**SHA-256 ของไฟล์จริง:** `6eabe7d01b493040bcfaa6d04ec1582c74611fb0ebc6d79b1b8e55fc6dfad681`
 
 **ผู้ศึกษา/บทบาท:** นายวายุ ทาโสม · PM
 
 ### 1. หน้าที่และการเชื่อมต่อ
 
-แทนงานหนึ่งชิ้นด้วย Assignment และรวมสูตร ลำดับงาน สถานะ ประวัติ และการเปลี่ยนสถานะที่ทุกหน้าใช้ร่วมกัน
+เลือกตำแหน่งข้อมูลที่เขียนได้ก่อนโหลดหน้า แทนงานหนึ่งชิ้นด้วย Assignment และรวมสูตร ลำดับงาน สถานะ ประวัติ และการเปลี่ยนสถานะที่ทุกหน้าใช้ร่วมกัน
 
 - **รับเข้า:** row งาน 7 field, สมาชิกจาก team.json, form ที่ app.py ส่งให้ และชั่วโมงว่างรายวัน
 - **ผลลัพธ์:** ข้อมูลแสดงผลที่คำนวณแล้ว dict/list/tuple และข้อความผลการบันทึก; บางฟังก์ชันเขียน data.json หรือ settings
 
-**เกี่ยวข้องกับ:** storage.py (อ่าน/เขียนงาน); team.json (ข้อมูลสมาชิก); planner_settings.json (งบรายวัน); datetime, hashlib, json, math, os (standard library)
+**เกี่ยวข้องกับ:** storage.py (อ่าน/เขียนงาน); team.json (ข้อมูลสมาชิก); planner_settings.json (งบรายวัน); datetime, errno, hashlib, json, math, os, tempfile (standard library)
 
 ### 2. ลำดับทำงาน
 
-1. สร้าง Assignment จาก field หลักและคำนวณ remaining/days/progress
-2. สร้าง view ของงาน เติมเจ้าของ สถานะ ป้ายวันส่ง งานย่อย และ version
-3. รวมภาระงานตามกำหนดส่ง หักเวลา work วันนี้ และตรวจเวลาไม่พอ
-4. เรียงลำดับแล้วแบ่งเวลาวันนี้ไม่เกินงบคงเหลือ
-5. แยก completed และนับสถิติพร้อม focus
-6. ตรวจ version ของฟอร์มก่อนเปลี่ยนสถานะและบันทึก
-7. รวม history แบบแยกชั่วโมงทำจริงจากเหตุการณ์อื่น
+1. configure_storage เลือกพื้นที่จาก DEADLINE_DATA_DIR หรือโฟลเดอร์โครงการ ทดสอบสิทธิ์และย้ายไปพื้นที่ชั่วคราวหากพื้นที่เดิมอ่านอย่างเดียว
+2. สร้างสำเนาข้อมูล/settings เฉพาะที่ยังไม่มีและกำหนด storage.DATA_FILE/SETTINGS_FILE โดยไม่แก้ storage.py
+3. สร้าง Assignment จาก field หลักและคำนวณ remaining/days/progress
+4. สร้าง view ของงาน เติมเจ้าของ สถานะ ป้ายวันส่ง งานย่อย และ version
+5. รวมภาระงานตามกำหนดส่ง หักเวลา work วันนี้ และตรวจเวลาไม่พอ
+6. เรียงลำดับแล้วแบ่งเวลาวันนี้ไม่เกินงบคงเหลือ
+7. แยก completed และนับสถิติพร้อม focus
+8. ตรวจ version ของฟอร์มก่อนเปลี่ยนสถานะและบันทึก
+9. รวม history แบบแยกชั่วโมงทำจริงจากเหตุการณ์อื่น
 
 ### 3. จุดที่ต้องอธิบายให้ถูก
 
+- พื้นที่ชั่วคราวบน serverless ไม่เก็บถาวรและไม่ใช้ร่วมกันทุก instance; STORAGE_NOTICE แจ้งผู้ใช้ผ่าน context
 - dict(row) สำเนาระดับบน; details_of ใช้ JSON round trip เพื่อคัดลอกข้อมูลซ้อนที่เป็น JSON
 - ไม่มี permanent ID สำหรับงาน; no เป็นตำแหน่งเริ่ม 0 และ SHA ตรวจเนื้อหาเดิม
 - hash ไม่ใช่ login, CSRF token หรือ file lock; JSON พร้อมกันหลาย process ยังอาจเขียนทับ
@@ -199,40 +206,41 @@ flowchart LR
 - [Q081: data.json เก็บกี่ field?](TEACHER_QUESTIONS.md#q081)
 - [Q083: ข้อมูลเก่า 5 field ยังเปิดได้หรือไม่?](TEACHER_QUESTIONS.md#q083)
 - [Q097: version ป้องกันผู้ใช้สองคนบันทึกพร้อมกันทั้งหมดหรือไม่?](TEACHER_QUESTIONS.md#q097)
-- [Q098: ถ้าจะเปิดเป็นบริการหลายคนต้องพัฒนาอะไร?](TEACHER_QUESTIONS.md#q098)
+- [Q098: ทำไมบน Vercel บันทึกไม่ได้ และแก้แล้วเก็บถาวรหรือไม่?](TEACHER_QUESTIONS.md#q098)
 - [Q100: ถ้าอาจารย์ให้เปลี่ยนโจทย์หรือจับ bug สด ควรเริ่มตรงไหน?](TEACHER_QUESTIONS.md#q100)
 
 ### 5. ฟังก์ชัน/คลาสและตำแหน่ง
 
 | ชื่อ | บรรทัดจริง | หน้าที่ |
 |---|---|---|
-| `Assignment` | L16–L36 | ประกาศ class `Assignment` เป็นแบบแทนงาน; ไม่ได้สร้าง object จนกว่าจะเรียก constructor |
-| `__init__` | L17–L25 | ประกาศฟังก์ชัน `__init__`: รับข้อมูล 7 field และเก็บใน self; priority ปกติและ details ว่างเป็นค่าเริ่มต้นสำหรับข้อมูลเก่า |
-| `remaining_hours` | L27–L28 | ประกาศฟังก์ชัน `remaining_hours`: คืนชั่วโมง estimate−done ไม่ติดลบ และปัด 2 ตำแหน่ง ไม่มีการเขียนไฟล์ |
-| `days_left` | L30–L31 | ประกาศฟังก์ชัน `days_left`: คืนจำนวนวันส่ง−วันนี้ของ Python อาจเป็นลบ ไม่ใช้เวลาในวัน |
-| `progress` | L33–L36 | ประกาศฟังก์ชัน `progress`: คืนเปอร์เซ็นต์ done/estimate แบบ int และจำกัด 0–100; estimate ไม่บวกคืน 0 |
-| `read_number` | L39–L46 | ประกาศฟังก์ชัน `read_number`: ลอง float และตรวจ finite; คืน None เมื่อแปลงไม่ได้หรือเป็น NaN/Infinity |
-| `read_date` | L49–L56 | ประกาศฟังก์ชัน `read_date`: อ่านวันและเทียบ isoformat ให้ตรง YYYY-MM-DD; คืน date หรือ None |
-| `daily_hours` | L59–L63 | ประกาศฟังก์ชัน `daily_hours`: อ่านเลขผ่าน read_number แล้วรับเฉพาะ 0.1–12 ชั่วโมง |
-| `load_daily_hours` | L66–L75 | ประกาศฟังก์ชัน `load_daily_hours`: อ่าน settings และตรวจค่า; หากไฟล์/โครงสร้าง/ค่าผิด ใช้ 2 |
-| `save_daily_hours` | L78–L80 | ประกาศฟังก์ชัน `save_daily_hours`: เขียน object daily_hours ลง SETTINGS_FILE ด้วย UTF-8; ผู้เรียกต้องตรวจค่าก่อน |
-| `team_data` | L83–L85 | ประกาศฟังก์ชัน `team_data`: อ่าน TEAM_FILE JSON เป็น dict; ฟังก์ชันนี้ไม่มี fallback เมื่อไฟล์เสีย |
-| `details_of` | L88–L100 | ประกาศฟังก์ชัน `details_of`: สำเนารายละเอียดซ้อนผ่าน JSON round trip และ setdefault เฉพาะ key ที่หาย ไม่บันทึกลงไฟล์ |
-| `version_of` | L103–L105 | ประกาศฟังก์ชัน `version_of`: serialize row แบบ sort_keys แล้วคืน SHA-256 hex สำหรับตรวจฟอร์มเดิม ไม่ใช่การเข้ารหัส |
-| `ceil_tenth` | L108–L109 | ประกาศฟังก์ชัน `ceil_tenth`: จำกัดไม่ติดลบและปัดขึ้น 0.1 ชั่วโมง พร้อม epsilon เล็กเพื่อลดการปัดเกินจาก float |
-| `task_view` | L112–L169 | ประกาศฟังก์ชัน `task_view`: สร้าง view จาก row: คำนวณชั่วโมง วัน เปอร์เซ็นต์ สถานะ เจ้าของ deadline งานย่อย stale และ version |
-| `all_views` | L172–L178 | ประกาศฟังก์ชัน `all_views`: วน row ทีละรายการ เรียก task_view พร้อม position ตั้งแต่ 0 แล้วคืน list ใหม่ |
-| `order_items` | L181–L192 | ประกาศฟังก์ชัน `order_items`: selection loop เลือก key น้อยที่สุดซ้ำจนรายการที่เหลือว่าง ไม่ใช้ sorted/lambda |
-| `order_key` | L195–L210 | ประกาศฟังก์ชัน `order_key`: คืน tuple ที่ใช้เทียบลำดับ; mode deadline คืนวัน/index; urgency ตามเกณฑ์ 6 ข้อที่กำหนด |
-| `worked_today` | L213–L219 | ประกาศฟังก์ชัน `worked_today`: รวม history kind=work ที่ date ตรงวันนี้ของทุก item รวมงานเสร็จ ปัด 2 ตำแหน่ง |
-| `annotate_plan` | L222–L267 | ประกาศฟังก์ชัน `annotate_plan`: คัด pending และเติมภาระสะสม/ความจุ/เฉลี่ย/ส่วนขาด/สถานะใน view คืน ordered กับ risk_count |
-| `today_plan` | L270–L292 | ประกาศฟังก์ชัน `today_plan`: เรียง pending แล้วเติมเหตุผลและ today_hours โดยลด budget ทุกงาน คืน ordered กับ recommendations |
-| `overview` | L295–L327 | ประกาศฟังก์ชัน `overview`: รวมข้อมูลทุกงาน แผน การจัดสรรวันนี้ และสถิติเป็น context เดียวให้ทุกหน้าใช้ |
-| `record_history` | L330–L336 | ประกาศฟังก์ชัน `record_history`: เติม event ลง row ในหน่วยความจำ ปรับ started/progress_on; ไม่เรียก storage.save เอง |
-| `row_index` | L339–L348 | ประกาศฟังก์ชัน `row_index`: รับ no ASCII digit ไม่เกิน 8 หลัก ตรวจขอบเขตและ version; คืน index หรือ None |
-| `quick_action` | L351–L403 | ประกาศฟังก์ชัน `quick_action`: โหลดงานล่าสุด ตรวจฟอร์ม เปลี่ยน start/complete/reopen และ storage.save หากผ่าน |
-| `work_history` | L406–L433 | ประกาศฟังก์ชัน `work_history`: รวมประวัติทุกงาน เติมชื่อ/เจ้าของ/ประเภท เรียงวันที่ใหม่ก่อน และรวมจริงเฉพาะ work |
-| `daily_history` | L436–L450 | ประกาศฟังก์ชัน `daily_history`: รวม history work ต่อ date เป็น hours/count โดยใช้รายการที่เรียงวันที่แล้ว |
+| `configure_storage` | L18–L59 | ประกาศฟังก์ชัน `configure_storage`: ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models |
+| `Assignment` | L65–L85 | ประกาศ class `Assignment` เป็นแบบแทนงาน; ไม่ได้สร้าง object จนกว่าจะเรียก constructor |
+| `__init__` | L66–L74 | ประกาศฟังก์ชัน `__init__`: รับข้อมูล 7 field และเก็บใน self; priority ปกติและ details ว่างเป็นค่าเริ่มต้นสำหรับข้อมูลเก่า |
+| `remaining_hours` | L76–L77 | ประกาศฟังก์ชัน `remaining_hours`: คืนชั่วโมง estimate−done ไม่ติดลบ และปัด 2 ตำแหน่ง ไม่มีการเขียนไฟล์ |
+| `days_left` | L79–L80 | ประกาศฟังก์ชัน `days_left`: คืนจำนวนวันส่ง−วันนี้ของ Python อาจเป็นลบ ไม่ใช้เวลาในวัน |
+| `progress` | L82–L85 | ประกาศฟังก์ชัน `progress`: คืนเปอร์เซ็นต์ done/estimate แบบ int และจำกัด 0–100; estimate ไม่บวกคืน 0 |
+| `read_number` | L88–L95 | ประกาศฟังก์ชัน `read_number`: ลอง float และตรวจ finite; คืน None เมื่อแปลงไม่ได้หรือเป็น NaN/Infinity |
+| `read_date` | L98–L105 | ประกาศฟังก์ชัน `read_date`: อ่านวันและเทียบ isoformat ให้ตรง YYYY-MM-DD; คืน date หรือ None |
+| `daily_hours` | L108–L112 | ประกาศฟังก์ชัน `daily_hours`: อ่านเลขผ่าน read_number แล้วรับเฉพาะ 0.1–12 ชั่วโมง |
+| `load_daily_hours` | L115–L124 | ประกาศฟังก์ชัน `load_daily_hours`: อ่าน settings และตรวจค่า; หากไฟล์/โครงสร้าง/ค่าผิด ใช้ 2 |
+| `save_daily_hours` | L127–L129 | ประกาศฟังก์ชัน `save_daily_hours`: เขียน object daily_hours ลง SETTINGS_FILE ด้วย UTF-8; ผู้เรียกต้องตรวจค่าก่อน |
+| `team_data` | L132–L134 | ประกาศฟังก์ชัน `team_data`: อ่าน TEAM_FILE JSON เป็น dict; ฟังก์ชันนี้ไม่มี fallback เมื่อไฟล์เสีย |
+| `details_of` | L137–L149 | ประกาศฟังก์ชัน `details_of`: สำเนารายละเอียดซ้อนผ่าน JSON round trip และ setdefault เฉพาะ key ที่หาย ไม่บันทึกลงไฟล์ |
+| `version_of` | L152–L154 | ประกาศฟังก์ชัน `version_of`: serialize row แบบ sort_keys แล้วคืน SHA-256 hex สำหรับตรวจฟอร์มเดิม ไม่ใช่การเข้ารหัส |
+| `ceil_tenth` | L157–L158 | ประกาศฟังก์ชัน `ceil_tenth`: จำกัดไม่ติดลบและปัดขึ้น 0.1 ชั่วโมง พร้อม epsilon เล็กเพื่อลดการปัดเกินจาก float |
+| `task_view` | L161–L218 | ประกาศฟังก์ชัน `task_view`: สร้าง view จาก row: คำนวณชั่วโมง วัน เปอร์เซ็นต์ สถานะ เจ้าของ deadline งานย่อย stale และ version |
+| `all_views` | L221–L227 | ประกาศฟังก์ชัน `all_views`: วน row ทีละรายการ เรียก task_view พร้อม position ตั้งแต่ 0 แล้วคืน list ใหม่ |
+| `order_items` | L230–L241 | ประกาศฟังก์ชัน `order_items`: selection loop เลือก key น้อยที่สุดซ้ำจนรายการที่เหลือว่าง ไม่ใช้ sorted/lambda |
+| `order_key` | L244–L259 | ประกาศฟังก์ชัน `order_key`: คืน tuple ที่ใช้เทียบลำดับ; mode deadline คืนวัน/index; urgency ตามเกณฑ์ 6 ข้อที่กำหนด |
+| `worked_today` | L262–L268 | ประกาศฟังก์ชัน `worked_today`: รวม history kind=work ที่ date ตรงวันนี้ของทุก item รวมงานเสร็จ ปัด 2 ตำแหน่ง |
+| `annotate_plan` | L271–L316 | ประกาศฟังก์ชัน `annotate_plan`: คัด pending และเติมภาระสะสม/ความจุ/เฉลี่ย/ส่วนขาด/สถานะใน view คืน ordered กับ risk_count |
+| `today_plan` | L319–L341 | ประกาศฟังก์ชัน `today_plan`: เรียง pending แล้วเติมเหตุผลและ today_hours โดยลด budget ทุกงาน คืน ordered กับ recommendations |
+| `overview` | L344–L377 | ประกาศฟังก์ชัน `overview`: รวมข้อมูลทุกงาน แผน การจัดสรรวันนี้ และสถิติเป็น context เดียวให้ทุกหน้าใช้ |
+| `record_history` | L380–L386 | ประกาศฟังก์ชัน `record_history`: เติม event ลง row ในหน่วยความจำ ปรับ started/progress_on; ไม่เรียก storage.save เอง |
+| `row_index` | L389–L398 | ประกาศฟังก์ชัน `row_index`: รับ no ASCII digit ไม่เกิน 8 หลัก ตรวจขอบเขตและ version; คืน index หรือ None |
+| `quick_action` | L401–L453 | ประกาศฟังก์ชัน `quick_action`: โหลดงานล่าสุด ตรวจฟอร์ม เปลี่ยน start/complete/reopen และ storage.save หากผ่าน |
+| `work_history` | L456–L483 | ประกาศฟังก์ชัน `work_history`: รวมประวัติทุกงาน เติมชื่อ/เจ้าของ/ประเภท เรียงวันที่ใหม่ก่อน และรวมจริงเฉพาะ work |
+| `daily_history` | L486–L500 | ประกาศฟังก์ชัน `daily_history`: รวม history work ต่อ date เป็น hours/count โดยใช้รายการที่เรียงวันที่แล้ว |
 
 ### 6. ชื่อและคำศัพท์ที่พบใน Python
 
@@ -242,12 +250,19 @@ flowchart LR
 |---|---|
 | `Assignment` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `AttributeError` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `DATA_FILE` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `EACCES` | ไม่มีสิทธิ์เข้าถึง |
+| `EPERM` | ไม่มีสิทธิ์ทำการดำเนินการนี้ |
+| `EROFS` | พื้นที่ไฟล์อ่านอย่างเดียว |
+| `FileExistsError` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `HERE` | โฟลเดอร์ root ที่ได้จากตำแหน่งไฟล์ models.py |
 | `OSError` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `OverflowError` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `PRIORITIES` | dict แปล priority เป็นข้อความไทย |
 | `SETTINGS_FILE` | path ของ planner_settings.json |
+| `STORAGE_NOTICE` | ข้อความสถานะพื้นที่เก็บข้อมูลที่ initializer คืน ว่างเมื่อใช้พื้นที่โครงการหรือพื้นที่ที่กำหนดเอง |
 | `TEAM_FILE` | path ของ team.json |
+| `TemporaryFile` | เปิดไฟล์ชั่วคราวและลบอัตโนมัติเมื่อปิด ใช้ทดสอบสิทธิ์เขียนของโฟลเดอร์ |
 | `TypeError` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `ValueError` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `__file__` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
@@ -264,10 +279,13 @@ flowchart LR
 | `ceil` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `ceil_tenth` | จำกัดไม่ติดลบและปัดขึ้น 0.1 ชั่วโมง พร้อม epsilon เล็กเพื่อลดการปัดเกินจาก float |
 | `completed` | รายการงานที่ remaining=0 |
+| `configure_storage` | ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models |
+| `configured` | path ที่ผู้ดูแลกำหนดผ่าน DEADLINE_DATA_DIR หลังตัดช่องว่าง |
 | `course` | ชื่อวิชา |
 | `cumulative` | ชั่วโมงงานสะสมถึงกำหนดส่งที่ตรวจ |
 | `daily_history` | รวม history work ต่อ date เป็น hours/count โดยใช้รายการที่เรียงวันที่แล้ว |
 | `daily_hours` | เวลาว่างรายวันที่ตั้งไว้ |
+| `data_dir` | โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings |
 | `date` | ชนิดวันที่ระดับวันจาก datetime |
 | `datetime` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `day` | สรุปวันที่หนึ่งใน daily_history |
@@ -276,6 +294,7 @@ flowchart LR
 | `details` | dict รายละเอียดซ้อนที่สำเนาแล้ว |
 | `details_of` | สำเนารายละเอียดซ้อนผ่าน JSON round trip และ setdefault เฉพาะ key ที่หาย ไม่บันทึกลงไฟล์ |
 | `dict` | ชนิด map; dict(row) เป็นสำเนาระดับบน |
+| `dir` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `dirname` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `done_hours` | ยอดความคืบหน้าสะสม รวมการปรับ/ปิดงานตามประมาณ |
 | `due_date` | วันส่งมาตรฐาน YYYY-MM-DD |
@@ -285,8 +304,13 @@ flowchart LR
 | `encoding` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `ensure_ascii` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `entry` | รายการประวัติหนึ่งครั้ง |
+| `environ` | mapping ของตัวแปรสภาพแวดล้อมของ process |
+| `errno` | module ค่ารหัสข้อผิดพลาดของระบบปฏิบัติการ |
+| `error` | ข้อความข้อผิดพลาดจาก check |
 | `estimated_hours` | ชั่วโมงที่คาดว่าจะใช้ทั้งงาน |
+| `exist_ok` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `existing` | สรุปวันที่พบแล้ว หรือ None |
+| `exists` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `file` | ไฟล์ที่เปิดใน with |
 | `first` | รายการที่มี key น้อยที่สุดในรอบเลือก |
 | `float` | แปลงเป็นเลขทศนิยม ยังต้องตรวจ finite |
@@ -294,6 +318,7 @@ flowchart LR
 | `form` | dict ของข้อมูลฟอร์ม POST |
 | `fromisoformat` | แปลงข้อความมาตรฐานเป็น date |
 | `get` | อ่านค่า dict พร้อม default เมื่อไม่มี key |
+| `gettempdir` | คืนตำแหน่งพื้นที่ชั่วคราวของระบบ เช่น /tmp บน Linux |
 | `hashlib` | standard library สำหรับค่า hash |
 | `hexdigest` | คืน hash เป็น string เลขฐานสิบหก |
 | `history` | ประวัติหลายรายการ |
@@ -318,6 +343,7 @@ flowchart LR
 | `load` | อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก |
 | `load_daily_hours` | อ่าน settings และตรวจค่า; หากไฟล์/โครงสร้าง/ค่าผิด ใช้ 2 |
 | `loads` | แปลงข้อความ JSON กลับเป็น object |
+| `makedirs` | สร้างโฟลเดอร์พร้อม parent; exist_ok=True ยอมรับโฟลเดอร์ที่มีแล้ว |
 | `math` | standard library finite และ ceil |
 | `max` | เลือกค่ามากที่สุด |
 | `member` | สมาชิกหนึ่งคน |
@@ -325,6 +351,7 @@ flowchart LR
 | `message` | ข้อความคืนให้ app แสดง banner |
 | `min` | เลือกค่าน้อยที่สุด |
 | `mode` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `name` | ชื่อสมาชิก/ข้อความงานย่อยตามบริบท |
 | `note` | หมายเหตุของประวัติ |
 | `on_date` | วันที่ทำงานที่ผู้ใช้เลือก |
 | `open` | เปิดไฟล์ตาม mode/encoding ที่กำหนด |
@@ -347,6 +374,7 @@ flowchart LR
 | `progress_date` | วันที่อัปเดตล่าสุด/วันที่สร้างที่ใช้เช็ก stale |
 | `quick_action` | โหลดงานล่าสุด ตรวจฟอร์ม เปลี่ยน start/complete/reopen และ storage.save หากผ่าน |
 | `raw_gap` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `read` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `read_date` | อ่านวันและเทียบ isoformat ให้ตรง YYYY-MM-DD; คืน date หรือ None |
 | `read_number` | ลอง float และตรวจ finite; คืน None เมื่อแปลงไม่ได้หรือเป็น NaN/Infinity |
 | `recommendations` | งานที่ได้รับการจัดสรรเวลาเพิ่มวันนี้ |
@@ -371,14 +399,20 @@ flowchart LR
 | `sha256` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `soon_count` | งานค้างส่งวันนี้ถึงอีก 3 วัน ไม่รวมเกินกำหนด |
 | `sort_keys` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `source` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `spent` | work วันนี้ที่ถูก cap ไม่เกินงบรายวัน |
 | `stale_count` | จำนวนงานค้างที่ไม่มีวันอัปเดต/ผ่านอย่างน้อย 2 วัน |
 | `storage` | module อ่าน/เขียนงานที่อาจารย์ให้ |
 | `str` | แปลงเป็นข้อความ |
+| `strip` | ตัดช่องว่างริมข้อความทั้งสองด้าน |
 | `subtask` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `suffix` | รหัส SHA ของ HERE 12 อักขระเพื่อแยกโฟลเดอร์ชั่วคราวตามตำแหน่งโครงการ |
+| `target` | path ไฟล์ข้อมูลปลายทางใน initializer |
 | `task` | Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน |
 | `task_view` | สร้าง view จาก row: คำนวณชั่วโมง วัน เปอร์เซ็นต์ สถานะ เจ้าของ deadline งานย่อย stale และ version |
 | `team_data` | อ่าน TEAM_FILE JSON เป็น dict; ฟังก์ชันนี้ไม่มี fallback เมื่อไฟล์เสีย |
+| `tempfile` | standard library สร้างพื้นที่ชั่วคราว |
+| `temporary` | boolean ว่าเลือกพื้นที่ชั่วคราวอัตโนมัติหรือไม่ |
 | `text` | ข้อความก่อนแปลงหรือ serialize |
 | `title` | ชื่องาน/ชื่อหัวข้อขึ้นกับ dict |
 | `today` | วันที่ปัจจุบันจากเครื่อง Python |
@@ -389,6 +423,7 @@ flowchart LR
 | `version_of` | serialize row แบบ sort_keys แล้วคืน SHA-256 hex สำหรับตรวจฟอร์มเดิม ไม่ใช่การเข้ารหัส |
 | `work_history` | รวมประวัติทุกงาน เติมชื่อ/เจ้าของ/ประเภท เรียงวันที่ใหม่ก่อน และรวมจริงเฉพาะ work |
 | `worked_today` | รวม history kind=work ที่ date ตรงวันนี้ของทุก item รวมงานเสร็จ ปัด 2 ตำแหน่ง |
+| `write` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 
 ### 7. โค้ดปัจจุบันครบทั้งไฟล์
 
@@ -397,10 +432,12 @@ flowchart LR
 ```python
 """Assignment, shared calculations, and form actions for Deadline Compass."""
 from datetime import date
+import errno
 import hashlib
 import json
 import math
 import os
+import tempfile
 
 import storage
 
@@ -408,6 +445,53 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_FILE = os.path.join(HERE, "planner_settings.json")
 TEAM_FILE = os.path.join(HERE, "team.json")
 PRIORITIES = {"high": "สูง", "normal": "ปกติ", "low": "ต่ำ"}
+
+
+def configure_storage():
+    """Keep the given storage API; select a writable location before pages use it."""
+    global SETTINGS_FILE
+    configured = os.environ.get("DEADLINE_DATA_DIR", "").strip()
+    data_dir = os.path.abspath(configured or HERE)
+    temporary = False
+    try:
+        os.makedirs(data_dir, exist_ok=True)
+        with tempfile.TemporaryFile(dir=data_dir):
+            pass
+    except OSError as error:
+        if configured or error.errno not in (errno.EROFS, errno.EACCES, errno.EPERM):
+            raise
+        suffix = hashlib.sha256(HERE.encode("utf-8")).hexdigest()[:12]
+        data_dir = os.path.join(tempfile.gettempdir(), "deadline-compass-" + suffix)
+        os.makedirs(data_dir, exist_ok=True)
+        temporary = True
+    if data_dir == os.path.abspath(HERE):
+        return ""
+    for name in ("data.json", "planner_settings.json"):
+        target = os.path.join(data_dir, name)
+        if not os.path.exists(target):
+            source = os.path.join(HERE, name)
+            if os.path.exists(source):
+                with open(source, encoding="utf-8") as file:
+                    text = file.read()
+            elif name == "data.json":
+                text = "[]"
+            else:
+                text = '{"daily_hours": 2}'
+            try:
+                # Exclusive creation preserves data already saved by another start.
+                with open(target, "x", encoding="utf-8") as file:
+                    file.write(text)
+            except FileExistsError:
+                pass
+    storage.DATA_FILE = os.path.join(data_dir, "data.json")
+    SETTINGS_FILE = os.path.join(data_dir, "planner_settings.json")
+    if temporary:
+        return ("เวอร์ชันสาธิต: ข้อมูลเก็บชั่วคราว อาจหายหรือไม่ต่อเนื่องเมื่อระบบเริ่มใหม่ "
+                "หากต้องการเก็บงานถาวร กรุณาใช้งานในเครื่องหรือพื้นที่จัดเก็บถาวร")
+    return ""
+
+
+STORAGE_NOTICE = configure_storage()
 
 
 class Assignment:
@@ -721,7 +805,8 @@ def overview(rows, hours):
             "soon_count": soon_count, "overdue_count": overdue_count,
             "remaining_total": round(remaining_total, 2), "risk_count": risk_count,
             "daily_hours": hours, "stale_count": stale_count,
-            "actual_today": actual_today, "today_remaining": today_remaining}
+            "actual_today": actual_today, "today_remaining": today_remaining,
+            "notice": STORAGE_NOTICE}
 
 
 def record_history(row, hours, kind, on_date, note=""):
@@ -871,13 +956,22 @@ from datetime import date
 #### L3
 
 ```python
+import errno
+```
+
+- นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import errno`
+- ชื่อที่ต้องรู้: `errno` = module ค่ารหัสข้อผิดพลาดของระบบปฏิบัติการ
+
+#### L4
+
+```python
 import hashlib
 ```
 
 - นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import hashlib`
 - ชื่อที่ต้องรู้: `hashlib` = standard library สำหรับค่า hash
 
-#### L4
+#### L5
 
 ```python
 import json
@@ -886,7 +980,7 @@ import json
 - นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import json`
 - ชื่อที่ต้องรู้: `json` = standard library serialize/parse JSON
 
-#### L5
+#### L6
 
 ```python
 import math
@@ -895,7 +989,7 @@ import math
 - นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import math`
 - ชื่อที่ต้องรู้: `math` = standard library finite และ ceil
 
-#### L6
+#### L7
 
 ```python
 import os
@@ -904,20 +998,14 @@ import os
 - นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import os`
 - ชื่อที่ต้องรู้: `os` = standard library จัดการ path
 
-#### L7
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L8
 
 ```python
-import storage
+import tempfile
 ```
 
-- นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import storage`
-- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้
+- นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import tempfile`
+- ชื่อที่ต้องรู้: `tempfile` = standard library สร้างพื้นที่ชั่วคราว
 
 #### L9
 
@@ -928,6 +1016,21 @@ import storage
 #### L10
 
 ```python
+import storage
+```
+
+- นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import storage`
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้
+
+#### L11
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L12
+
+```python
 HERE = os.path.dirname(os.path.abspath(__file__))
 ```
 
@@ -935,7 +1038,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `HERE` = โฟลเดอร์ root ที่ได้จากตำแหน่งไฟล์ models.py; `os` = standard library จัดการ path
 
-#### L11
+#### L13
 
 ```python
 SETTINGS_FILE = os.path.join(HERE, "planner_settings.json")
@@ -945,7 +1048,7 @@ SETTINGS_FILE = os.path.join(HERE, "planner_settings.json")
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `SETTINGS_FILE` = path ของ planner_settings.json; `os` = standard library จัดการ path; `HERE` = โฟลเดอร์ root ที่ได้จากตำแหน่งไฟล์ models.py
 
-#### L12
+#### L14
 
 ```python
 TEAM_FILE = os.path.join(HERE, "team.json")
@@ -955,7 +1058,7 @@ TEAM_FILE = os.path.join(HERE, "team.json")
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `TEAM_FILE` = path ของ team.json; `os` = standard library จัดการ path; `HERE` = โฟลเดอร์ root ที่ได้จากตำแหน่งไฟล์ models.py
 
-#### L13
+#### L15
 
 ```python
 PRIORITIES = {"high": "สูง", "normal": "ปกติ", "low": "ต่ำ"}
@@ -965,19 +1068,492 @@ PRIORITIES = {"high": "สูง", "normal": "ปกติ", "low": "ต่ำ"}
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set
 - ชื่อที่ต้องรู้: `PRIORITIES` = dict แปล priority เป็นข้อความไทย
 
-#### L14
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L15
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L16
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L17
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L18
+
+```python
+def configure_storage():
+```
+
+- ประกาศฟังก์ชัน `configure_storage`: ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+
+#### L19
+
+```python
+    """Keep the given storage API; select a writable location before pages use it."""
+```
+
+- ข้อความ docstring อธิบาย module/function ไม่ใช่คำสั่งบันทึกงาน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L20
+
+```python
+    global SETTINGS_FILE
+```
+
+- ให้การกำหนดค่าของ `SETTINGS_FILE` ภายในฟังก์ชันอ้างตัวแปรระดับ module เช่น path การตั้งค่า ไม่ใช่รายการงานใน page
+- ชื่อที่ต้องรู้: `SETTINGS_FILE` = path ของ planner_settings.json
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L21
+
+```python
+    configured = os.environ.get("DEADLINE_DATA_DIR", "").strip()
+```
+
+- เก็บผล เรียก `os.environ.get('DEADLINE_DATA_DIR', '').strip` ด้วย argument ที่แสดงในโค้ด ลง `configured`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `configured` = path ที่ผู้ดูแลกำหนดผ่าน DEADLINE_DATA_DIR หลังตัดช่องว่าง; `os` = standard library จัดการ path; `environ` = mapping ของตัวแปรสภาพแวดล้อมของ process; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key; `strip` = ตัดช่องว่างริมข้อความทั้งสองด้าน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L22
+
+```python
+    data_dir = os.path.abspath(configured or HERE)
+```
+
+- เก็บผล เรียก `os.path.abspath` ด้วย argument ที่แสดงในโค้ด ลง `data_dir`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `data_dir` = โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings; `os` = standard library จัดการ path; `configured` = path ที่ผู้ดูแลกำหนดผ่าน DEADLINE_DATA_DIR หลังตัดช่องว่าง; `HERE` = โฟลเดอร์ root ที่ได้จากตำแหน่งไฟล์ models.py
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L23
+
+```python
+    temporary = False
+```
+
+- เก็บผล `False` ลง `temporary`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `temporary` = boolean ว่าเลือกพื้นที่ชั่วคราวอัตโนมัติหรือไม่; `False` = boolean เท็จ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L24
+
+```python
+    try:
+```
+
+- ลองคำสั่งใน try; หากเกิด exception ที่ระบุจึงเข้า except
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L25
+
+```python
+        os.makedirs(data_dir, exist_ok=True)
+```
+
+- เรียก `os.makedirs` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `os` = standard library จัดการ path; `makedirs` = สร้างโฟลเดอร์พร้อม parent; exist_ok=True ยอมรับโฟลเดอร์ที่มีแล้ว; `data_dir` = โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings; `True` = boolean จริง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L26
+
+```python
+        with tempfile.TemporaryFile(dir=data_dir):
+```
+
+- ใช้ resource ใน with: เรียก `tempfile.TemporaryFile` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `tempfile` = standard library สร้างพื้นที่ชั่วคราว; `TemporaryFile` = เปิดไฟล์ชั่วคราวและลบอัตโนมัติเมื่อปิด ใช้ทดสอบสิทธิ์เขียนของโฟลเดอร์; `data_dir` = โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L27
+
+```python
+            pass
+```
+
+- คำสั่งว่างใน block; with ยังเปิดและปิดไฟล์ชั่วคราวเพื่อทดสอบสิทธิ์เขียน หรือ except รับข้อผิดพลาดที่คาดไว้ตามตำแหน่ง
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L28
+
+```python
+    except OSError as error:
+```
+
+- รับ exception `OSError` แล้วทำ branch นี้
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `error` = ข้อความข้อผิดพลาดจาก check
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L29
+
+```python
+        if configured or error.errno not in (errno.EROFS, errno.EACCES, errno.EPERM):
+```
+
+- ตรวจเงื่อนไข: `configured` หรือ `error.errno` ไม่อยู่ใน tuple [`errno.EROFS`, `errno.EACCES`, `errno.EPERM`]; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `configured` = path ที่ผู้ดูแลกำหนดผ่าน DEADLINE_DATA_DIR หลังตัดช่องว่าง; `error` = ข้อความข้อผิดพลาดจาก check; `errno` = module ค่ารหัสข้อผิดพลาดของระบบปฏิบัติการ; `EROFS` = พื้นที่ไฟล์อ่านอย่างเดียว; `EACCES` = ไม่มีสิทธิ์เข้าถึง; `EPERM` = ไม่มีสิทธิ์ทำการดำเนินการนี้
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L30
+
+```python
+            raise
+```
+
+- ส่ง exception/exit ตามค่าที่ระบุ ไม่ใช่ return context
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L31
+
+```python
+        suffix = hashlib.sha256(HERE.encode("utf-8")).hexdigest()[:12]
+```
+
+- เก็บผล `hashlib.sha256(HERE.encode('utf-8')).hexdigest()[:12]` (อ่าน key/index) ลง `suffix`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `]` ปิด list/การอ้าง index/key
+- ชื่อที่ต้องรู้: `suffix` = รหัส SHA ของ HERE 12 อักขระเพื่อแยกโฟลเดอร์ชั่วคราวตามตำแหน่งโครงการ; `hashlib` = standard library สำหรับค่า hash; `HERE` = โฟลเดอร์ root ที่ได้จากตำแหน่งไฟล์ models.py; `encode` = แปลงข้อความเป็น bytes UTF-8; `hexdigest` = คืน hash เป็น string เลขฐานสิบหก
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L32
+
+```python
+        data_dir = os.path.join(tempfile.gettempdir(), "deadline-compass-" + suffix)
+```
+
+- เก็บผล เรียก `os.path.join` ด้วย argument ที่แสดงในโค้ด ลง `data_dir`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `,` คั่นสมาชิก/argument; `+` บวกเลข/ต่อข้อความตามชนิด
+- ชื่อที่ต้องรู้: `data_dir` = โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings; `os` = standard library จัดการ path; `tempfile` = standard library สร้างพื้นที่ชั่วคราว; `gettempdir` = คืนตำแหน่งพื้นที่ชั่วคราวของระบบ เช่น /tmp บน Linux; `suffix` = รหัส SHA ของ HERE 12 อักขระเพื่อแยกโฟลเดอร์ชั่วคราวตามตำแหน่งโครงการ
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L33
+
+```python
+        os.makedirs(data_dir, exist_ok=True)
+```
+
+- เรียก `os.makedirs` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `os` = standard library จัดการ path; `makedirs` = สร้างโฟลเดอร์พร้อม parent; exist_ok=True ยอมรับโฟลเดอร์ที่มีแล้ว; `data_dir` = โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings; `True` = boolean จริง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L34
+
+```python
+        temporary = True
+```
+
+- เก็บผล `True` ลง `temporary`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `temporary` = boolean ว่าเลือกพื้นที่ชั่วคราวอัตโนมัติหรือไม่; `True` = boolean จริง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L35
+
+```python
+    if data_dir == os.path.abspath(HERE):
+```
+
+- ตรวจเงื่อนไข: `data_dir` เท่ากับ เรียก `os.path.abspath` ด้วย argument ที่แสดงในโค้ด; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `data_dir` = โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings; `os` = standard library จัดการ path; `HERE` = โฟลเดอร์ root ที่ได้จากตำแหน่งไฟล์ models.py
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L36
+
+```python
+        return ""
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `''`
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L37
+
+```python
+    for name in ("data.json", "planner_settings.json"):
+```
+
+- วน tuple [`'data.json'`, `'planner_settings.json'`] ให้ `name` รับสมาชิกทีละรอบ
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `name` = ชื่อสมาชิก/ข้อความงานย่อยตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L38
+
+```python
+        target = os.path.join(data_dir, name)
+```
+
+- เก็บผล เรียก `os.path.join` ด้วย argument ที่แสดงในโค้ด ลง `target`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `target` = path ไฟล์ข้อมูลปลายทางใน initializer; `os` = standard library จัดการ path; `data_dir` = โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings; `name` = ชื่อสมาชิก/ข้อความงานย่อยตามบริบท
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L39
+
+```python
+        if not os.path.exists(target):
+```
+
+- ตรวจเงื่อนไข: ไม่เป็นจริง: เรียก `os.path.exists` ด้วย argument ที่แสดงในโค้ด; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `os` = standard library จัดการ path; `target` = path ไฟล์ข้อมูลปลายทางใน initializer
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L40
+
+```python
+            source = os.path.join(HERE, name)
+```
+
+- เก็บผล เรียก `os.path.join` ด้วย argument ที่แสดงในโค้ด ลง `source`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `os` = standard library จัดการ path; `HERE` = โฟลเดอร์ root ที่ได้จากตำแหน่งไฟล์ models.py; `name` = ชื่อสมาชิก/ข้อความงานย่อยตามบริบท
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L41
+
+```python
+            if os.path.exists(source):
+```
+
+- ตรวจเงื่อนไข: เรียก `os.path.exists` ด้วย argument ที่แสดงในโค้ด; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `os` = standard library จัดการ path
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L42
+
+```python
+                with open(source, encoding="utf-8") as file:
+```
+
+- ใช้ resource ใน with: เรียก `open` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `open` = เปิดไฟล์ตาม mode/encoding ที่กำหนด; `file` = ไฟล์ที่เปิดใน with
+- ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L43
+
+```python
+                    text = file.read()
+```
+
+- เก็บผล เรียก `file.read` ด้วย argument ที่แสดงในโค้ด ลง `text`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize; `file` = ไฟล์ที่เปิดใน with
+- ย่อหน้า 20 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L44
+
+```python
+            elif name == "data.json":
+```
+
+- ตรวจเงื่อนไข: `name` เท่ากับ `'data.json'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `name` = ชื่อสมาชิก/ข้อความงานย่อยตามบริบท
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L45
+
+```python
+                text = "[]"
+```
+
+- เก็บผล `'[]'` ลง `text`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize
+- ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L46
+
+```python
+            else:
+```
+
+- else: ทำทางเลือกเมื่อเงื่อนไขก่อนหน้าไม่จริง
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L47
+
+```python
+                text = '{"daily_hours": 2}'
+```
+
+- เก็บผล `'{"daily_hours": 2}'` ลง `text`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize
+- ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L48
+
+```python
+            try:
+```
+
+- ลองคำสั่งใน try; หากเกิด exception ที่ระบุจึงเข้า except
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L49
+
+```python
+                # Exclusive creation preserves data already saved by another start.
+```
+
+- comment สำหรับผู้อ่าน: Exclusive creation preserves data already saved by another start.
+- ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L50
+
+```python
+                with open(target, "x", encoding="utf-8") as file:
+```
+
+- ใช้ resource ใน with: เรียก `open` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `open` = เปิดไฟล์ตาม mode/encoding ที่กำหนด; `target` = path ไฟล์ข้อมูลปลายทางใน initializer; `file` = ไฟล์ที่เปิดใน with
+- ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L51
+
+```python
+                    file.write(text)
+```
+
+- เรียก `file.write` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `file` = ไฟล์ที่เปิดใน with; `text` = ข้อความก่อนแปลงหรือ serialize
+- ย่อหน้า 20 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L52
+
+```python
+            except FileExistsError:
+```
+
+- รับ exception `FileExistsError` แล้วทำ branch นี้
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L53
+
+```python
+                pass
+```
+
+- คำสั่งว่างใน block; with ยังเปิดและปิดไฟล์ชั่วคราวเพื่อทดสอบสิทธิ์เขียน หรือ except รับข้อผิดพลาดที่คาดไว้ตามตำแหน่ง
+- ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L54
+
+```python
+    storage.DATA_FILE = os.path.join(data_dir, "data.json")
+```
+
+- เก็บผล เรียก `os.path.join` ด้วย argument ที่แสดงในโค้ด ลง `storage.DATA_FILE`
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `os` = standard library จัดการ path; `data_dir` = โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L55
+
+```python
+    SETTINGS_FILE = os.path.join(data_dir, "planner_settings.json")
+```
+
+- เก็บผล เรียก `os.path.join` ด้วย argument ที่แสดงในโค้ด ลง `SETTINGS_FILE`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `SETTINGS_FILE` = path ของ planner_settings.json; `os` = standard library จัดการ path; `data_dir` = โฟลเดอร์ปลายทางที่เลือกให้เขียนข้อมูล/settings
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L56
+
+```python
+    if temporary:
+```
+
+- ตรวจเงื่อนไข: `temporary`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `temporary` = boolean ว่าเลือกพื้นที่ชั่วคราวอัตโนมัติหรือไม่
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L57
+
+```python
+        return ("เวอร์ชันสาธิต: ข้อมูลเก็บชั่วคราว อาจหายหรือไม่ต่อเนื่องเมื่อระบบเริ่มใหม่ "
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'เวอร์ชันสาธิต: ข้อมูลเก็บชั่วคราว อาจหายหรือไม่ต่อเนื่องเมื่อระบบเริ่มใหม่ หากต้องการเก็บงานถาวร กรุณาใช้งานในเครื่องหรือพื้นที่จัดเก็บถาวร'`
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L58
+
+```python
+                "หากต้องการเก็บงานถาวร กรุณาใช้งานในเครื่องหรือพื้นที่จัดเก็บถาวร")
+```
+
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L57: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'เวอร์ชันสาธิต: ข้อมูลเก็บชั่วคราว อาจหายหรือไม่ต่อเนื่องเมื่อระบบเริ่มใหม่ หากต้องการเก็บงานถาวร กรุณาใช้งานในเครื่องหรือพื้นที่จัดเก็บถาวร'`
+- เครื่องหมาย: `)` ปิดกลุ่มที่เปิดด้วย (
+- ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L59
+
+```python
+    return ""
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `''`
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L60
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L61
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L62
+
+```python
+STORAGE_NOTICE = configure_storage()
+```
+
+- เก็บผล เรียก `configure_storage`: ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models ลง `STORAGE_NOTICE`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `STORAGE_NOTICE` = ข้อความสถานะพื้นที่เก็บข้อมูลที่ initializer คืน ว่างเมื่อใช้พื้นที่โครงการหรือพื้นที่ที่กำหนดเอง
+
+#### L63
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L64
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L65
 
 ```python
 class Assignment:
@@ -986,7 +1562,7 @@ class Assignment:
 - ประกาศ class `Assignment` เป็นแบบแทนงาน; ไม่ได้สร้าง object จนกว่าจะเรียก constructor
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 
-#### L17
+#### L66
 
 ```python
     def __init__(self, title, course, due_date, estimated_hours, done_hours,
@@ -997,18 +1573,18 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `title` = ชื่องาน/ชื่อหัวข้อขึ้นกับ dict; `course` = ชื่อวิชา; `due_date` = วันส่งมาตรฐาน YYYY-MM-DD; `estimated_hours` = ชั่วโมงที่คาดว่าจะใช้ทั้งงาน; `done_hours` = ยอดความคืบหน้าสะสม รวมการปรับ/ปิดงานตามประมาณ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L18
+#### L67
 
 ```python
                  priority="normal", details=None):
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L17: ประกาศฟังก์ชัน `__init__`: รับข้อมูล 7 field และเก็บใน self; priority ปกติและ details ว่างเป็นค่าเริ่มต้นสำหรับข้อมูลเก่า
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L66: ประกาศฟังก์ชัน `__init__`: รับข้อมูล 7 field และเก็บใน self; priority ปกติและ details ว่างเป็นค่าเริ่มต้นสำหรับข้อมูลเก่า
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `priority` = ระดับ high/normal/low; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 17 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L19
+#### L68
 
 ```python
         self.title = title
@@ -1019,7 +1595,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `title` = ชื่องาน/ชื่อหัวข้อขึ้นกับ dict
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L20
+#### L69
 
 ```python
         self.course = course
@@ -1030,7 +1606,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `course` = ชื่อวิชา
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L21
+#### L70
 
 ```python
         self.due_date = due_date
@@ -1041,7 +1617,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `due_date` = วันส่งมาตรฐาน YYYY-MM-DD
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L22
+#### L71
 
 ```python
         self.estimated_hours = estimated_hours
@@ -1052,7 +1628,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `estimated_hours` = ชั่วโมงที่คาดว่าจะใช้ทั้งงาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L23
+#### L72
 
 ```python
         self.done_hours = done_hours
@@ -1063,7 +1639,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `done_hours` = ยอดความคืบหน้าสะสม รวมการปรับ/ปิดงานตามประมาณ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L24
+#### L73
 
 ```python
         self.priority = priority
@@ -1074,7 +1650,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `priority` = ระดับ high/normal/low
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L25
+#### L74
 
 ```python
         self.details = details or {}
@@ -1085,13 +1661,13 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L26
+#### L75
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L27
+#### L76
 
 ```python
     def remaining_hours(self):
@@ -1102,7 +1678,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L28
+#### L77
 
 ```python
         return round(max(0, self.estimated_hours - self.done_hours), 2)
@@ -1113,13 +1689,13 @@ class Assignment:
 - ชื่อที่ต้องรู้: `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `max` = เลือกค่ามากที่สุด; `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `estimated_hours` = ชั่วโมงที่คาดว่าจะใช้ทั้งงาน; `done_hours` = ยอดความคืบหน้าสะสม รวมการปรับ/ปิดงานตามประมาณ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L29
+#### L78
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L30
+#### L79
 
 ```python
     def days_left(self):
@@ -1130,7 +1706,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `days_left` = วันส่ง−วันนี้; `self` = object ของงานที่เมธอดกำลังทำงานอยู่
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L31
+#### L80
 
 ```python
         return (date.fromisoformat(self.due_date) - date.today()).days
@@ -1141,13 +1717,13 @@ class Assignment:
 - ชื่อที่ต้องรู้: `date` = ชนิดวันที่ระดับวันจาก datetime; `fromisoformat` = แปลงข้อความมาตรฐานเป็น date; `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `due_date` = วันส่งมาตรฐาน YYYY-MM-DD; `today` = วันที่ปัจจุบันจากเครื่อง Python; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L32
+#### L81
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L33
+#### L82
 
 ```python
     def progress(self):
@@ -1158,7 +1734,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `progress` = เปอร์เซ็นต์แบบจำนวนเต็ม; `self` = object ของงานที่เมธอดกำลังทำงานอยู่
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L34
+#### L83
 
 ```python
         if self.estimated_hours <= 0:
@@ -1169,7 +1745,7 @@ class Assignment:
 - ชื่อที่ต้องรู้: `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `estimated_hours` = ชั่วโมงที่คาดว่าจะใช้ทั้งงาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L35
+#### L84
 
 ```python
             return 0
@@ -1178,7 +1754,7 @@ class Assignment:
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `0`
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L36
+#### L85
 
 ```python
         return min(100, max(0, int(self.done_hours * 100 / self.estimated_hours)))
@@ -1187,459 +1763,6 @@ class Assignment:
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `min`(`100`, `max`(`0`, `int`(((`self.done_hours` คูณ/ทำซ้ำ `100`) หาร/ต่อ Path `self.estimated_hours`))))
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `*` คูณ/ทำซ้ำข้อความ/ขยาย argument ตามตำแหน่ง; `/` หาร; กับ pathlib.Path เป็นการต่อ path; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `min` = เลือกค่าน้อยที่สุด; `max` = เลือกค่ามากที่สุด; `int` = แปลงเป็นจำนวนเต็ม ตัดเศษของเลขบวกใน progress; `self` = object ของงานที่เมธอดกำลังทำงานอยู่; `done_hours` = ยอดความคืบหน้าสะสม รวมการปรับ/ปิดงานตามประมาณ; `estimated_hours` = ชั่วโมงที่คาดว่าจะใช้ทั้งงาน
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L37
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L38
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L39
-
-```python
-def read_number(text):
-```
-
-- ประกาศฟังก์ชัน `read_number`: ลอง float และตรวจ finite; คืน None เมื่อแปลงไม่ได้หรือเป็น NaN/Infinity
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize
-
-#### L40
-
-```python
-    try:
-```
-
-- ลองคำสั่งใน try; หากเกิด exception ที่ระบุจึงเข้า except
-- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L41
-
-```python
-        value = float(text)
-```
-
-- เก็บผล `float`(`text`) ลง `value`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `float` = แปลงเป็นเลขทศนิยม ยังต้องตรวจ finite; `text` = ข้อความก่อนแปลงหรือ serialize
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L42
-
-```python
-    except (TypeError, ValueError, OverflowError):
-```
-
-- รับ exception tuple [`TypeError`, `ValueError`, `OverflowError`] แล้วทำ branch นี้
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L43
-
-```python
-        return None
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
-- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L44
-
-```python
-    if not math.isfinite(value):
-```
-
-- ตรวจเงื่อนไข: ไม่เป็นจริง: เรียก `math.isfinite` ด้วย argument ที่แสดงในโค้ด; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `math` = standard library finite และ ceil; `isfinite` = ตรวจว่าเป็นเลขจำกัด ไม่ใช่ NaN/Infinity; `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L45
-
-```python
-        return None
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
-- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L46
-
-```python
-    return value
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `value`
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L47
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L48
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L49
-
-```python
-def read_date(text):
-```
-
-- ประกาศฟังก์ชัน `read_date`: อ่านวันและเทียบ isoformat ให้ตรง YYYY-MM-DD; คืน date หรือ None
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize
-
-#### L50
-
-```python
-    try:
-```
-
-- ลองคำสั่งใน try; หากเกิด exception ที่ระบุจึงเข้า except
-- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L51
-
-```python
-        result = date.fromisoformat(str(text))
-```
-
-- เก็บผล เรียก `date.fromisoformat` ด้วย argument ที่แสดงในโค้ด ลง `result`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `date` = ชนิดวันที่ระดับวันจาก datetime; `fromisoformat` = แปลงข้อความมาตรฐานเป็น date; `str` = แปลงเป็นข้อความ; `text` = ข้อความก่อนแปลงหรือ serialize
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L52
-
-```python
-    except (TypeError, ValueError):
-```
-
-- รับ exception tuple [`TypeError`, `ValueError`] แล้วทำ branch นี้
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L53
-
-```python
-        return None
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
-- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L54
-
-```python
-    if result.isoformat() != text:
-```
-
-- ตรวจเงื่อนไข: เรียก `result.isoformat` ด้วย argument ที่แสดงในโค้ด ไม่เท่ากับ `text`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `!=` เปรียบเทียบไม่เท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `isoformat` = แปลง date เป็น YYYY-MM-DD; `text` = ข้อความก่อนแปลงหรือ serialize
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L55
-
-```python
-        return None
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
-- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L56
-
-```python
-    return result
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `result`
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L57
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L58
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L59
-
-```python
-def daily_hours(text):
-```
-
-- ประกาศฟังก์ชัน `daily_hours`: อ่านเลขผ่าน read_number แล้วรับเฉพาะ 0.1–12 ชั่วโมง
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `daily_hours` = เวลาว่างรายวันที่ตั้งไว้; `text` = ข้อความก่อนแปลงหรือ serialize
-
-#### L60
-
-```python
-    value = read_number(text)
-```
-
-- เก็บผล เรียก `read_number`: ลอง float และตรวจ finite; คืน None เมื่อแปลงไม่ได้หรือเป็น NaN/Infinity ลง `value`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `text` = ข้อความก่อนแปลงหรือ serialize
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L61
-
-```python
-    if value is None or value < 0.1 or value > 12:
-```
-
-- ตรวจเงื่อนไข: `value` เป็น object เดียวกับ None (ไม่มีค่าที่ใช้ได้) หรือ `value` น้อยกว่า `0.1` หรือ `value` มากกว่า `12`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
-- เครื่องหมาย: `<` น้อยกว่า; `>` มากกว่า; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L62
-
-```python
-        return None
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
-- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L63
-
-```python
-    return value
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `value`
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L64
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L65
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L66
-
-```python
-def load_daily_hours():
-```
-
-- ประกาศฟังก์ชัน `load_daily_hours`: อ่าน settings และตรวจค่า; หากไฟล์/โครงสร้าง/ค่าผิด ใช้ 2
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-
-#### L67
-
-```python
-    try:
-```
-
-- ลองคำสั่งใน try; หากเกิด exception ที่ระบุจึงเข้า except
-- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L68
-
-```python
-        with open(SETTINGS_FILE, encoding="utf-8") as file:
-```
-
-- ใช้ resource ใน with: เรียก `open` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `open` = เปิดไฟล์ตาม mode/encoding ที่กำหนด; `SETTINGS_FILE` = path ของ planner_settings.json; `file` = ไฟล์ที่เปิดใน with
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L69
-
-```python
-            settings = json.load(file)
-```
-
-- เก็บผล เรียก `json.load` ด้วย argument ที่แสดงในโค้ด ลง `settings`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `settings` = object ของค่าชั่วโมงรายวัน; `json` = standard library serialize/parse JSON; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก; `file` = ไฟล์ที่เปิดใน with
-- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L70
-
-```python
-        value = daily_hours(settings.get("daily_hours"))
-```
-
-- เก็บผล เรียก `daily_hours`: อ่านเลขผ่าน read_number แล้วรับเฉพาะ 0.1–12 ชั่วโมง ลง `value`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `daily_hours` = เวลาว่างรายวันที่ตั้งไว้; `settings` = object ของค่าชั่วโมงรายวัน; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L71
-
-```python
-    except (OSError, ValueError, AttributeError):
-```
-
-- รับ exception tuple [`OSError`, `ValueError`, `AttributeError`] แล้วทำ branch นี้
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L72
-
-```python
-        value = None
-```
-
-- เก็บผล None (ไม่มีค่าที่ใช้ได้) ลง `value`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L73
-
-```python
-    if value is None:
-```
-
-- ตรวจเงื่อนไข: `value` เป็น object เดียวกับ None (ไม่มีค่าที่ใช้ได้); เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
-- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L74
-
-```python
-        return 2
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `2`
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L75
-
-```python
-    return value
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `value`
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L76
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L77
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L78
-
-```python
-def save_daily_hours(value):
-```
-
-- ประกาศฟังก์ชัน `save_daily_hours`: เขียน object daily_hours ลง SETTINGS_FILE ด้วย UTF-8; ผู้เรียกต้องตรวจค่าก่อน
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
-
-#### L79
-
-```python
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as file:
-```
-
-- ใช้ resource ใน with: เรียก `open` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `open` = เปิดไฟล์ตาม mode/encoding ที่กำหนด; `SETTINGS_FILE` = path ของ planner_settings.json; `file` = ไฟล์ที่เปิดใน with
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L80
-
-```python
-        json.dump({"daily_hours": value}, file, ensure_ascii=False, indent=2)
-```
-
-- เรียก `json.dump` ด้วย argument ที่แสดงในโค้ด
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `json` = standard library serialize/parse JSON; `dump` = เขียน JSON ลงไฟล์; `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `file` = ไฟล์ที่เปิดใน with; `False` = boolean เท็จ
-- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L81
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L82
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L83
-
-```python
-def team_data():
-```
-
-- ประกาศฟังก์ชัน `team_data`: อ่าน TEAM_FILE JSON เป็น dict; ฟังก์ชันนี้ไม่มี fallback เมื่อไฟล์เสีย
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-
-#### L84
-
-```python
-    with open(TEAM_FILE, encoding="utf-8") as file:
-```
-
-- ใช้ resource ใน with: เรียก `open` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `open` = เปิดไฟล์ตาม mode/encoding ที่กำหนด; `TEAM_FILE` = path ของ team.json; `file` = ไฟล์ที่เปิดใน with
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L85
-
-```python
-        return json.load(file)
-```
-
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: เรียก `json.load` ด้วย argument ที่แสดงในโค้ด
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `json` = standard library serialize/parse JSON; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก; `file` = ไฟล์ที่เปิดใน with
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L86
@@ -1657,184 +1780,176 @@ def team_data():
 #### L88
 
 ```python
-def details_of(row):
+def read_number(text):
 ```
 
-- ประกาศฟังก์ชัน `details_of`: สำเนารายละเอียดซ้อนผ่าน JSON round trip และ setdefault เฉพาะ key ที่หาย ไม่บันทึกลงไฟล์
+- ประกาศฟังก์ชัน `read_number`: ลอง float และตรวจ finite; คืน None เมื่อแปลงไม่ได้หรือเป็น NaN/Infinity
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
+- ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize
 
 #### L89
 
 ```python
-    # Make an independent copy, including the nested subtasks and history.
+    try:
 ```
 
-- comment สำหรับผู้อ่าน: Make an independent copy, including the nested subtasks and history.
+- ลองคำสั่งใน try; หากเกิด exception ที่ระบุจึงเข้า except
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L90
 
 ```python
-    details = row.get("details", {})
+        value = float(text)
 ```
 
-- เก็บผล อ่าน `'details'` จาก `row` พร้อม default เมื่อไม่มี ลง `details`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `{` เปิด dict/set ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `row` = dict ข้อมูลงานหนึ่งรายการ; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+- เก็บผล `float`(`text`) ลง `value`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `float` = แปลงเป็นเลขทศนิยม ยังต้องตรวจ finite; `text` = ข้อความก่อนแปลงหรือ serialize
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L91
 
 ```python
-    if not isinstance(details, dict):
+    except (TypeError, ValueError, OverflowError):
 ```
 
-- ตรวจเงื่อนไข: ไม่เป็นจริง: เรียก `isinstance` ด้วย argument ที่แสดงในโค้ด; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- รับ exception tuple [`TypeError`, `ValueError`, `OverflowError`] แล้วทำ branch นี้
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `isinstance` = ตรวจชนิด object; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `dict` = ชนิด map; dict(row) เป็นสำเนาระดับบน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L92
 
 ```python
-        details = {}
+        return None
 ```
 
-- เก็บผล dict ที่มี key  ลง `details`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `{` เปิด dict/set ตามบริบท; `}` ปิด dict/set
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
+- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L93
 
 ```python
-    details = json.loads(json.dumps(details, ensure_ascii=False))
+    if not math.isfinite(value):
 ```
 
-- เก็บผล เรียก `json.loads` ด้วย argument ที่แสดงในโค้ด ลง `details`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `json` = standard library serialize/parse JSON; `loads` = แปลงข้อความ JSON กลับเป็น object; `dumps` = แปลง object เป็นข้อความ JSON; `False` = boolean เท็จ
+- ตรวจเงื่อนไข: ไม่เป็นจริง: เรียก `math.isfinite` ด้วย argument ที่แสดงในโค้ด; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `math` = standard library finite และ ceil; `isfinite` = ตรวจว่าเป็นเลขจำกัด ไม่ใช่ NaN/Infinity; `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L94
 
 ```python
-    details.setdefault("started", row["done_hours"] > 0)
+        return None
 ```
 
-- เติม `'started'` ใน `details` เฉพาะเมื่อ key หาย
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `>` มากกว่า; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี; `row` = dict ข้อมูลงานหนึ่งรายการ
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
+- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L95
 
 ```python
-    details.setdefault("owner", "")
+    return value
 ```
 
-- เติม `'owner'` ใน `details` เฉพาะเมื่อ key หาย
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `value`
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L96
 
-```python
-    details.setdefault("subtasks", [])
-```
+(บรรทัดว่าง)
 
-- เติม `'subtasks'` ใน `details` เฉพาะเมื่อ key หาย
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
 #### L97
 
-```python
-    details.setdefault("history", [])
-```
+(บรรทัดว่าง)
 
-- เติม `'history'` ใน `details` เฉพาะเมื่อ key หาย
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
 #### L98
 
 ```python
-    details.setdefault("progress_on", "")
+def read_date(text):
 ```
 
-- เติม `'progress_on'` ใน `details` เฉพาะเมื่อ key หาย
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+- ประกาศฟังก์ชัน `read_date`: อ่านวันและเทียบ isoformat ให้ตรง YYYY-MM-DD; คืน date หรือ None
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize
 
 #### L99
 
 ```python
-    details.setdefault("created_on", "")
+    try:
 ```
 
-- เติม `'created_on'` ใน `details` เฉพาะเมื่อ key หาย
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
+- ลองคำสั่งใน try; หากเกิด exception ที่ระบุจึงเข้า except
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L100
 
 ```python
-    return details
+        result = date.fromisoformat(str(text))
 ```
 
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `details`
-- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+- เก็บผล เรียก `date.fromisoformat` ด้วย argument ที่แสดงในโค้ด ลง `result`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `date` = ชนิดวันที่ระดับวันจาก datetime; `fromisoformat` = แปลงข้อความมาตรฐานเป็น date; `str` = แปลงเป็นข้อความ; `text` = ข้อความก่อนแปลงหรือ serialize
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L101
 
-(บรรทัดว่าง)
+```python
+    except (TypeError, ValueError):
+```
 
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+- รับ exception tuple [`TypeError`, `ValueError`] แล้วทำ branch นี้
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L102
 
-(บรรทัดว่าง)
+```python
+        return None
+```
 
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
+- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L103
 
 ```python
-def version_of(row):
+    if result.isoformat() != text:
 ```
 
-- ประกาศฟังก์ชัน `version_of`: serialize row แบบ sort_keys แล้วคืน SHA-256 hex สำหรับตรวจฟอร์มเดิม ไม่ใช่การเข้ารหัส
-- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
-- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
+- ตรวจเงื่อนไข: เรียก `result.isoformat` ด้วย argument ที่แสดงในโค้ด ไม่เท่ากับ `text`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `!=` เปรียบเทียบไม่เท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `isoformat` = แปลง date เป็น YYYY-MM-DD; `text` = ข้อความก่อนแปลงหรือ serialize
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L104
 
 ```python
-    text = json.dumps(row, ensure_ascii=False, sort_keys=True)
+        return None
 ```
 
-- เก็บผล เรียก `json.dumps` ด้วย argument ที่แสดงในโค้ด ลง `text`
-- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize; `json` = standard library serialize/parse JSON; `dumps` = แปลง object เป็นข้อความ JSON; `row` = dict ข้อมูลงานหนึ่งรายการ; `False` = boolean เท็จ; `True` = boolean จริง
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
+- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L105
 
 ```python
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return result
 ```
 
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: เรียก `hashlib.sha256(text.encode('utf-8')).hexdigest` ด้วย argument ที่แสดงในโค้ด
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `hashlib` = standard library สำหรับค่า hash; `text` = ข้อความก่อนแปลงหรือ serialize; `encode` = แปลงข้อความเป็น bytes UTF-8; `hexdigest` = คืน hash เป็น string เลขฐานสิบหก
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `result`
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L106
@@ -1852,6 +1967,467 @@ def version_of(row):
 #### L108
 
 ```python
+def daily_hours(text):
+```
+
+- ประกาศฟังก์ชัน `daily_hours`: อ่านเลขผ่าน read_number แล้วรับเฉพาะ 0.1–12 ชั่วโมง
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `daily_hours` = เวลาว่างรายวันที่ตั้งไว้; `text` = ข้อความก่อนแปลงหรือ serialize
+
+#### L109
+
+```python
+    value = read_number(text)
+```
+
+- เก็บผล เรียก `read_number`: ลอง float และตรวจ finite; คืน None เมื่อแปลงไม่ได้หรือเป็น NaN/Infinity ลง `value`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `text` = ข้อความก่อนแปลงหรือ serialize
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L110
+
+```python
+    if value is None or value < 0.1 or value > 12:
+```
+
+- ตรวจเงื่อนไข: `value` เป็น object เดียวกับ None (ไม่มีค่าที่ใช้ได้) หรือ `value` น้อยกว่า `0.1` หรือ `value` มากกว่า `12`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `<` น้อยกว่า; `>` มากกว่า; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L111
+
+```python
+        return None
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: None (ไม่มีค่าที่ใช้ได้)
+- ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L112
+
+```python
+    return value
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `value`
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L113
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L114
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L115
+
+```python
+def load_daily_hours():
+```
+
+- ประกาศฟังก์ชัน `load_daily_hours`: อ่าน settings และตรวจค่า; หากไฟล์/โครงสร้าง/ค่าผิด ใช้ 2
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+
+#### L116
+
+```python
+    try:
+```
+
+- ลองคำสั่งใน try; หากเกิด exception ที่ระบุจึงเข้า except
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L117
+
+```python
+        with open(SETTINGS_FILE, encoding="utf-8") as file:
+```
+
+- ใช้ resource ใน with: เรียก `open` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `open` = เปิดไฟล์ตาม mode/encoding ที่กำหนด; `SETTINGS_FILE` = path ของ planner_settings.json; `file` = ไฟล์ที่เปิดใน with
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L118
+
+```python
+            settings = json.load(file)
+```
+
+- เก็บผล เรียก `json.load` ด้วย argument ที่แสดงในโค้ด ลง `settings`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `settings` = object ของค่าชั่วโมงรายวัน; `json` = standard library serialize/parse JSON; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก; `file` = ไฟล์ที่เปิดใน with
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L119
+
+```python
+        value = daily_hours(settings.get("daily_hours"))
+```
+
+- เก็บผล เรียก `daily_hours`: อ่านเลขผ่าน read_number แล้วรับเฉพาะ 0.1–12 ชั่วโมง ลง `value`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `daily_hours` = เวลาว่างรายวันที่ตั้งไว้; `settings` = object ของค่าชั่วโมงรายวัน; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L120
+
+```python
+    except (OSError, ValueError, AttributeError):
+```
+
+- รับ exception tuple [`OSError`, `ValueError`, `AttributeError`] แล้วทำ branch นี้
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L121
+
+```python
+        value = None
+```
+
+- เก็บผล None (ไม่มีค่าที่ใช้ได้) ลง `value`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L122
+
+```python
+    if value is None:
+```
+
+- ตรวจเงื่อนไข: `value` เป็น object เดียวกับ None (ไม่มีค่าที่ใช้ได้); เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L123
+
+```python
+        return 2
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `2`
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L124
+
+```python
+    return value
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `value`
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L125
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L126
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L127
+
+```python
+def save_daily_hours(value):
+```
+
+- ประกาศฟังก์ชัน `save_daily_hours`: เขียน object daily_hours ลง SETTINGS_FILE ด้วย UTF-8; ผู้เรียกต้องตรวจค่าก่อน
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
+
+#### L128
+
+```python
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as file:
+```
+
+- ใช้ resource ใน with: เรียก `open` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `open` = เปิดไฟล์ตาม mode/encoding ที่กำหนด; `SETTINGS_FILE` = path ของ planner_settings.json; `file` = ไฟล์ที่เปิดใน with
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L129
+
+```python
+        json.dump({"daily_hours": value}, file, ensure_ascii=False, indent=2)
+```
+
+- เรียก `json.dump` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `json` = standard library serialize/parse JSON; `dump` = เขียน JSON ลงไฟล์; `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `file` = ไฟล์ที่เปิดใน with; `False` = boolean เท็จ
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L130
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L131
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L132
+
+```python
+def team_data():
+```
+
+- ประกาศฟังก์ชัน `team_data`: อ่าน TEAM_FILE JSON เป็น dict; ฟังก์ชันนี้ไม่มี fallback เมื่อไฟล์เสีย
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+
+#### L133
+
+```python
+    with open(TEAM_FILE, encoding="utf-8") as file:
+```
+
+- ใช้ resource ใน with: เรียก `open` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `open` = เปิดไฟล์ตาม mode/encoding ที่กำหนด; `TEAM_FILE` = path ของ team.json; `file` = ไฟล์ที่เปิดใน with
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L134
+
+```python
+        return json.load(file)
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: เรียก `json.load` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `json` = standard library serialize/parse JSON; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก; `file` = ไฟล์ที่เปิดใน with
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L135
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L136
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L137
+
+```python
+def details_of(row):
+```
+
+- ประกาศฟังก์ชัน `details_of`: สำเนารายละเอียดซ้อนผ่าน JSON round trip และ setdefault เฉพาะ key ที่หาย ไม่บันทึกลงไฟล์
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
+
+#### L138
+
+```python
+    # Make an independent copy, including the nested subtasks and history.
+```
+
+- comment สำหรับผู้อ่าน: Make an independent copy, including the nested subtasks and history.
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L139
+
+```python
+    details = row.get("details", {})
+```
+
+- เก็บผล อ่าน `'details'` จาก `row` พร้อม default เมื่อไม่มี ลง `details`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `{` เปิด dict/set ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `row` = dict ข้อมูลงานหนึ่งรายการ; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L140
+
+```python
+    if not isinstance(details, dict):
+```
+
+- ตรวจเงื่อนไข: ไม่เป็นจริง: เรียก `isinstance` ด้วย argument ที่แสดงในโค้ด; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `isinstance` = ตรวจชนิด object; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `dict` = ชนิด map; dict(row) เป็นสำเนาระดับบน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L141
+
+```python
+        details = {}
+```
+
+- เก็บผล dict ที่มี key  ลง `details`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `{` เปิด dict/set ตามบริบท; `}` ปิด dict/set
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L142
+
+```python
+    details = json.loads(json.dumps(details, ensure_ascii=False))
+```
+
+- เก็บผล เรียก `json.loads` ด้วย argument ที่แสดงในโค้ด ลง `details`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `json` = standard library serialize/parse JSON; `loads` = แปลงข้อความ JSON กลับเป็น object; `dumps` = แปลง object เป็นข้อความ JSON; `False` = boolean เท็จ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L143
+
+```python
+    details.setdefault("started", row["done_hours"] > 0)
+```
+
+- เติม `'started'` ใน `details` เฉพาะเมื่อ key หาย
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `>` มากกว่า; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี; `row` = dict ข้อมูลงานหนึ่งรายการ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L144
+
+```python
+    details.setdefault("owner", "")
+```
+
+- เติม `'owner'` ใน `details` เฉพาะเมื่อ key หาย
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L145
+
+```python
+    details.setdefault("subtasks", [])
+```
+
+- เติม `'subtasks'` ใน `details` เฉพาะเมื่อ key หาย
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L146
+
+```python
+    details.setdefault("history", [])
+```
+
+- เติม `'history'` ใน `details` เฉพาะเมื่อ key หาย
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L147
+
+```python
+    details.setdefault("progress_on", "")
+```
+
+- เติม `'progress_on'` ใน `details` เฉพาะเมื่อ key หาย
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L148
+
+```python
+    details.setdefault("created_on", "")
+```
+
+- เติม `'created_on'` ใน `details` เฉพาะเมื่อ key หาย
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `setdefault` = เติม default เฉพาะ key ที่ยังไม่มี
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L149
+
+```python
+    return details
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `details`
+- ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L150
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L151
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L152
+
+```python
+def version_of(row):
+```
+
+- ประกาศฟังก์ชัน `version_of`: serialize row แบบ sort_keys แล้วคืน SHA-256 hex สำหรับตรวจฟอร์มเดิม ไม่ใช่การเข้ารหัส
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
+
+#### L153
+
+```python
+    text = json.dumps(row, ensure_ascii=False, sort_keys=True)
+```
+
+- เก็บผล เรียก `json.dumps` ด้วย argument ที่แสดงในโค้ด ลง `text`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize; `json` = standard library serialize/parse JSON; `dumps` = แปลง object เป็นข้อความ JSON; `row` = dict ข้อมูลงานหนึ่งรายการ; `False` = boolean เท็จ; `True` = boolean จริง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L154
+
+```python
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: เรียก `hashlib.sha256(text.encode('utf-8')).hexdigest` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `hashlib` = standard library สำหรับค่า hash; `text` = ข้อความก่อนแปลงหรือ serialize; `encode` = แปลงข้อความเป็น bytes UTF-8; `hexdigest` = คืน hash เป็น string เลขฐานสิบหก
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L155
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L156
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L157
+
+```python
 def ceil_tenth(value):
 ```
 
@@ -1859,7 +2435,7 @@ def ceil_tenth(value):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
 
-#### L109
+#### L158
 
 ```python
     return math.ceil(max(0, value) * 10 - 0.000000001) / 10
@@ -1870,19 +2446,19 @@ def ceil_tenth(value):
 - ชื่อที่ต้องรู้: `math` = standard library finite และ ceil; `max` = เลือกค่ามากที่สุด; `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L110
+#### L159
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L111
+#### L160
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L112
+#### L161
 
 ```python
 def task_view(row, position, members):
@@ -1892,7 +2468,7 @@ def task_view(row, position, members):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `position` = ตัวนับตำแหน่งงานเริ่ม 0; `members` = list สมาชิกจาก team.json
 
-#### L113
+#### L162
 
 ```python
     details = details_of(row)
@@ -1903,7 +2479,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L114
+#### L163
 
 ```python
     task = Assignment(row["title"], row["course"], row["due_date"],
@@ -1914,29 +2490,29 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L115
+#### L164
 
 ```python
                       row["estimated_hours"], row["done_hours"],
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L114: เก็บผล เรียก `Assignment` ด้วย argument ที่แสดงในโค้ด ลง `task`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L163: เก็บผล เรียก `Assignment` ด้วย argument ที่แสดงในโค้ด ลง `task`
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 22 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L116
+#### L165
 
 ```python
                       row.get("priority", "normal"), details)
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L114: เก็บผล เรียก `Assignment` ด้วย argument ที่แสดงในโค้ด ลง `task`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L163: เก็บผล เรียก `Assignment` ด้วย argument ที่แสดงในโค้ด ลง `task`
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 22 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L117
+#### L166
 
 ```python
     item = dict(row)
@@ -1947,7 +2523,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `dict` = ชนิด map; dict(row) เป็นสำเนาระดับบน; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L118
+#### L167
 
 ```python
     item["details"] = details
@@ -1958,7 +2534,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L119
+#### L168
 
 ```python
     item["priority"] = task.priority
@@ -1969,7 +2545,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `priority` = ระดับ high/normal/low
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L120
+#### L169
 
 ```python
     item["priority_label"] = PRIORITIES.get(task.priority, "ปกติ")
@@ -1980,7 +2556,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `PRIORITIES` = dict แปล priority เป็นข้อความไทย; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `priority` = ระดับ high/normal/low
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L121
+#### L170
 
 ```python
     item["no"] = position
@@ -1991,7 +2567,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `position` = ตัวนับตำแหน่งงานเริ่ม 0
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L122
+#### L171
 
 ```python
     item["version"] = version_of(row)
@@ -2002,7 +2578,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L123
+#### L172
 
 ```python
     item["remaining_hours"] = task.remaining_hours()
@@ -2013,7 +2589,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L124
+#### L173
 
 ```python
     item["days_left"] = task.days_left()
@@ -2024,7 +2600,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `days_left` = วันส่ง−วันนี้
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L125
+#### L174
 
 ```python
     item["progress"] = task.progress()
@@ -2035,7 +2611,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `progress` = เปอร์เซ็นต์แบบจำนวนเต็ม
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L126
+#### L175
 
 ```python
     item["owner_name"] = "ยังไม่มีผู้รับผิดชอบ"
@@ -2046,7 +2622,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L127
+#### L176
 
 ```python
     for member in members:
@@ -2057,7 +2633,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `member` = สมาชิกหนึ่งคน; `members` = list สมาชิกจาก team.json
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L128
+#### L177
 
 ```python
         if member["id"] == details["owner"]:
@@ -2068,7 +2644,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `member` = สมาชิกหนึ่งคน; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L129
+#### L178
 
 ```python
             item["owner_name"] = member["name"]
@@ -2079,7 +2655,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `member` = สมาชิกหนึ่งคน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L130
+#### L179
 
 ```python
     if item["remaining_hours"] == 0:
@@ -2090,7 +2666,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L131
+#### L180
 
 ```python
         item["status"] = "เสร็จแล้ว"
@@ -2101,7 +2677,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L132
+#### L181
 
 ```python
         item["status_icon"] = "✓"
@@ -2112,7 +2688,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L133
+#### L182
 
 ```python
         item["tone"] = "good"
@@ -2123,7 +2699,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L134
+#### L183
 
 ```python
     elif details["started"] or task.done_hours > 0:
@@ -2134,7 +2710,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `done_hours` = ยอดความคืบหน้าสะสม รวมการปรับ/ปิดงานตามประมาณ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L135
+#### L184
 
 ```python
         item["status"] = "กำลังทำ"
@@ -2145,7 +2721,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L136
+#### L185
 
 ```python
         item["status_icon"] = "▶"
@@ -2156,7 +2732,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L137
+#### L186
 
 ```python
         item["tone"] = "gold"
@@ -2167,7 +2743,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L138
+#### L187
 
 ```python
     else:
@@ -2177,7 +2753,7 @@ def task_view(row, position, members):
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L139
+#### L188
 
 ```python
         item["status"] = "ยังไม่เริ่ม"
@@ -2188,7 +2764,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L140
+#### L189
 
 ```python
         item["status_icon"] = "○"
@@ -2199,7 +2775,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L141
+#### L190
 
 ```python
         item["tone"] = ""
@@ -2210,7 +2786,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L142
+#### L191
 
 ```python
     if item["days_left"] < 0:
@@ -2221,7 +2797,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L143
+#### L192
 
 ```python
         item["deadline_label"] = "เกินกำหนด " + str(-item["days_left"]) + " วัน"
@@ -2232,7 +2808,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `str` = แปลงเป็นข้อความ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L144
+#### L193
 
 ```python
         item["deadline_icon"] = "!"
@@ -2243,7 +2819,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L145
+#### L194
 
 ```python
         item["deadline_tone"] = "bad"
@@ -2254,7 +2830,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L146
+#### L195
 
 ```python
     elif item["days_left"] <= 3:
@@ -2265,7 +2841,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L147
+#### L196
 
 ```python
         item["deadline_label"] = "ใกล้ถึงกำหนด · อีก " + str(item["days_left"]) + " วัน"
@@ -2276,7 +2852,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `str` = แปลงเป็นข้อความ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L148
+#### L197
 
 ```python
         if item["days_left"] == 0:
@@ -2287,7 +2863,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L149
+#### L198
 
 ```python
             item["deadline_label"] = "ใกล้ถึงกำหนด · ส่งวันนี้"
@@ -2298,7 +2874,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L150
+#### L199
 
 ```python
         item["deadline_icon"] = "◷"
@@ -2309,7 +2885,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L151
+#### L200
 
 ```python
         item["deadline_tone"] = "gold"
@@ -2320,7 +2896,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L152
+#### L201
 
 ```python
     else:
@@ -2330,7 +2906,7 @@ def task_view(row, position, members):
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L153
+#### L202
 
 ```python
         item["deadline_label"] = "ส่งอีก " + str(item["days_left"]) + " วัน"
@@ -2341,7 +2917,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `str` = แปลงเป็นข้อความ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L154
+#### L203
 
 ```python
         item["deadline_icon"] = "▣"
@@ -2352,7 +2928,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L155
+#### L204
 
 ```python
         item["deadline_tone"] = ""
@@ -2363,7 +2939,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L156
+#### L205
 
 ```python
     item["subtask_done"] = 0
@@ -2374,7 +2950,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L157
+#### L206
 
 ```python
     for subtask in details["subtasks"]:
@@ -2385,7 +2961,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L158
+#### L207
 
 ```python
         if subtask.get("done"):
@@ -2396,7 +2972,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L159
+#### L208
 
 ```python
             item["subtask_done"] = item["subtask_done"] + 1
@@ -2407,7 +2983,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L160
+#### L209
 
 ```python
     item["subtask_count"] = len(details["subtasks"])
@@ -2418,7 +2994,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `len` = จำนวนสมาชิก/อักขระ; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L161
+#### L210
 
 ```python
     item["stale"] = False
@@ -2429,7 +3005,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `False` = boolean เท็จ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L162
+#### L211
 
 ```python
     progress_date = read_date(details["progress_on"])
@@ -2440,7 +3016,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `progress_date` = วันที่อัปเดตล่าสุด/วันที่สร้างที่ใช้เช็ก stale; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L163
+#### L212
 
 ```python
     if progress_date is None:
@@ -2451,7 +3027,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `progress_date` = วันที่อัปเดตล่าสุด/วันที่สร้างที่ใช้เช็ก stale; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L164
+#### L213
 
 ```python
         progress_date = read_date(details["created_on"])
@@ -2462,7 +3038,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `progress_date` = วันที่อัปเดตล่าสุด/วันที่สร้างที่ใช้เช็ก stale; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L165
+#### L214
 
 ```python
     if progress_date is None:
@@ -2473,7 +3049,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `progress_date` = วันที่อัปเดตล่าสุด/วันที่สร้างที่ใช้เช็ก stale; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L166
+#### L215
 
 ```python
         item["stale"] = item["remaining_hours"] > 0
@@ -2484,7 +3060,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L167
+#### L216
 
 ```python
     elif item["remaining_hours"] > 0:
@@ -2495,7 +3071,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L168
+#### L217
 
 ```python
         item["stale"] = (date.today() - progress_date).days >= 2
@@ -2506,7 +3082,7 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `progress_date` = วันที่อัปเดตล่าสุด/วันที่สร้างที่ใช้เช็ก stale; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L169
+#### L218
 
 ```python
     return item
@@ -2516,19 +3092,19 @@ def task_view(row, position, members):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L170
+#### L219
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L171
+#### L220
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L172
+#### L221
 
 ```python
 def all_views(rows, members):
@@ -2538,7 +3114,7 @@ def all_views(rows, members):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `rows` = list ข้อมูลงานจาก storage; `members` = list สมาชิกจาก team.json
 
-#### L173
+#### L222
 
 ```python
     items = []
@@ -2549,7 +3125,7 @@ def all_views(rows, members):
 - ชื่อที่ต้องรู้: `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L174
+#### L223
 
 ```python
     position = 0
@@ -2560,7 +3136,7 @@ def all_views(rows, members):
 - ชื่อที่ต้องรู้: `position` = ตัวนับตำแหน่งงานเริ่ม 0
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L175
+#### L224
 
 ```python
     for row in rows:
@@ -2571,7 +3147,7 @@ def all_views(rows, members):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `rows` = list ข้อมูลงานจาก storage
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L176
+#### L225
 
 ```python
         items.append(task_view(row, position, members))
@@ -2582,7 +3158,7 @@ def all_views(rows, members):
 - ชื่อที่ต้องรู้: `items` = list ของข้อมูลแสดงผล; `append` = เพิ่มหนึ่งรายการต่อท้าย list; `row` = dict ข้อมูลงานหนึ่งรายการ; `position` = ตัวนับตำแหน่งงานเริ่ม 0; `members` = list สมาชิกจาก team.json
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L177
+#### L226
 
 ```python
         position = position + 1
@@ -2593,7 +3169,7 @@ def all_views(rows, members):
 - ชื่อที่ต้องรู้: `position` = ตัวนับตำแหน่งงานเริ่ม 0
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L178
+#### L227
 
 ```python
     return items
@@ -2603,19 +3179,19 @@ def all_views(rows, members):
 - ชื่อที่ต้องรู้: `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L179
+#### L228
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L180
+#### L229
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L181
+#### L230
 
 ```python
 def order_items(items, mode="urgency"):
@@ -2625,7 +3201,7 @@ def order_items(items, mode="urgency"):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `items` = list ของข้อมูลแสดงผล
 
-#### L182
+#### L231
 
 ```python
     # Selection loop adapted from catalog/ranking.
@@ -2634,7 +3210,7 @@ def order_items(items, mode="urgency"):
 - comment สำหรับผู้อ่าน: Selection loop adapted from catalog/ranking.
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L183
+#### L232
 
 ```python
     remaining = list(items)
@@ -2645,7 +3221,7 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท; `list` = ชนิดรายการ; list(items) สำเนารายการระดับบน; `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L184
+#### L233
 
 ```python
     ordered = []
@@ -2656,7 +3232,7 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L185
+#### L234
 
 ```python
     while remaining:
@@ -2667,7 +3243,7 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L186
+#### L235
 
 ```python
         first = remaining[0]
@@ -2678,7 +3254,7 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `first` = รายการที่มี key น้อยที่สุดในรอบเลือก; `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L187
+#### L236
 
 ```python
         for item in remaining:
@@ -2689,7 +3265,7 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L188
+#### L237
 
 ```python
             if order_key(item, mode) < order_key(first, mode):
@@ -2700,7 +3276,7 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `first` = รายการที่มี key น้อยที่สุดในรอบเลือก
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L189
+#### L238
 
 ```python
                 first = item
@@ -2711,7 +3287,7 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `first` = รายการที่มี key น้อยที่สุดในรอบเลือก; `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L190
+#### L239
 
 ```python
         ordered.append(first)
@@ -2722,7 +3298,7 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์; `append` = เพิ่มหนึ่งรายการต่อท้าย list; `first` = รายการที่มี key น้อยที่สุดในรอบเลือก
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L191
+#### L240
 
 ```python
         remaining.remove(first)
@@ -2733,7 +3309,7 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท; `remove` = เอารายการที่เท่ากับค่าที่ให้หนึ่งรายการออกจาก list; `first` = รายการที่มี key น้อยที่สุดในรอบเลือก
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L192
+#### L241
 
 ```python
     return ordered
@@ -2743,19 +3319,19 @@ def order_items(items, mode="urgency"):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L193
+#### L242
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L194
+#### L243
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L195
+#### L244
 
 ```python
 def order_key(item, mode):
@@ -2765,7 +3341,7 @@ def order_key(item, mode):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 
-#### L196
+#### L245
 
 ```python
     if mode == "deadline":
@@ -2775,7 +3351,7 @@ def order_key(item, mode):
 - เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L197
+#### L246
 
 ```python
         return (item["due_date"], item["no"])
@@ -2786,7 +3362,7 @@ def order_key(item, mode):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L198
+#### L247
 
 ```python
     overdue_rank = 1
@@ -2796,7 +3372,7 @@ def order_key(item, mode):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L199
+#### L248
 
 ```python
     if item["days_left"] < 0:
@@ -2807,7 +3383,7 @@ def order_key(item, mode):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L200
+#### L249
 
 ```python
         overdue_rank = 0
@@ -2817,7 +3393,7 @@ def order_key(item, mode):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L201
+#### L250
 
 ```python
     risk_rank = 1
@@ -2827,7 +3403,7 @@ def order_key(item, mode):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L202
+#### L251
 
 ```python
     if item.get("at_risk"):
@@ -2838,7 +3414,7 @@ def order_key(item, mode):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L203
+#### L252
 
 ```python
         risk_rank = 0
@@ -2848,7 +3424,7 @@ def order_key(item, mode):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L204
+#### L253
 
 ```python
     priority_rank = 1
@@ -2858,7 +3434,7 @@ def order_key(item, mode):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L205
+#### L254
 
 ```python
     if item["priority"] == "high":
@@ -2869,7 +3445,7 @@ def order_key(item, mode):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L206
+#### L255
 
 ```python
         priority_rank = 0
@@ -2879,7 +3455,7 @@ def order_key(item, mode):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L207
+#### L256
 
 ```python
     elif item["priority"] == "low":
@@ -2890,7 +3466,7 @@ def order_key(item, mode):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L208
+#### L257
 
 ```python
         priority_rank = 2
@@ -2900,7 +3476,7 @@ def order_key(item, mode):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L209
+#### L258
 
 ```python
     return (overdue_rank, item["due_date"], -item["remaining_hours"],
@@ -2911,30 +3487,30 @@ def order_key(item, mode):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L210
+#### L259
 
 ```python
             risk_rank, priority_rank, item["no"])
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L209: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: tuple จำนวน 6 สมาชิกตามโค้ด
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L258: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: tuple จำนวน 6 สมาชิกตามโค้ด
 - เครื่องหมาย: `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L211
+#### L260
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L212
+#### L261
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L213
+#### L262
 
 ```python
 def worked_today(items):
@@ -2944,7 +3520,7 @@ def worked_today(items):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `items` = list ของข้อมูลแสดงผล
 
-#### L214
+#### L263
 
 ```python
     total = 0
@@ -2954,7 +3530,7 @@ def worked_today(items):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L215
+#### L264
 
 ```python
     for item in items:
@@ -2965,7 +3541,7 @@ def worked_today(items):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L216
+#### L265
 
 ```python
         for entry in item["details"]["history"]:
@@ -2976,7 +3552,7 @@ def worked_today(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง; `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L217
+#### L266
 
 ```python
             if entry["kind"] == "work" and entry["date"] == date.today().isoformat():
@@ -2987,7 +3563,7 @@ def worked_today(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L218
+#### L267
 
 ```python
                 total = total + entry["hours"]
@@ -2998,7 +3574,7 @@ def worked_today(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L219
+#### L268
 
 ```python
     return round(total, 2)
@@ -3009,19 +3585,19 @@ def worked_today(items):
 - ชื่อที่ต้องรู้: `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L220
+#### L269
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L221
+#### L270
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L222
+#### L271
 
 ```python
 def annotate_plan(items, hours):
@@ -3031,7 +3607,7 @@ def annotate_plan(items, hours):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `items` = list ของข้อมูลแสดงผล; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 
-#### L223
+#### L272
 
 ```python
     spent = min(hours, worked_today(items))
@@ -3042,7 +3618,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `spent` = work วันนี้ที่ถูก cap ไม่เกินงบรายวัน; `min` = เลือกค่าน้อยที่สุด; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L224
+#### L273
 
 ```python
     pending = []
@@ -3053,7 +3629,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `pending` = รายการงานที่ remaining>0
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L225
+#### L274
 
 ```python
     for item in items:
@@ -3064,7 +3640,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L226
+#### L275
 
 ```python
         if item["remaining_hours"] > 0:
@@ -3075,7 +3651,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L227
+#### L276
 
 ```python
             pending.append(item)
@@ -3086,7 +3662,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `pending` = รายการงานที่ remaining>0; `append` = เพิ่มหนึ่งรายการต่อท้าย list; `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L228
+#### L277
 
 ```python
     ordered = order_items(pending, "deadline")
@@ -3097,7 +3673,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์; `pending` = รายการงานที่ remaining>0
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L229
+#### L278
 
 ```python
     risk_count = 0
@@ -3108,7 +3684,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `risk_count` = จำนวนงานที่ at_risk จริง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L230
+#### L279
 
 ```python
     for task in ordered:
@@ -3119,7 +3695,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `ordered` = รายการหลังเรียงตามเกณฑ์
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L231
+#### L280
 
 ```python
         cumulative = 0
@@ -3130,7 +3706,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `cumulative` = ชั่วโมงงานสะสมถึงกำหนดส่งที่ตรวจ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L232
+#### L281
 
 ```python
         # Equal deadlines share the whole day's cumulative workload.
@@ -3139,7 +3715,7 @@ def annotate_plan(items, hours):
 - comment สำหรับผู้อ่าน: Equal deadlines share the whole day's cumulative workload.
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L233
+#### L282
 
 ```python
         for other in ordered:
@@ -3150,7 +3726,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L234
+#### L283
 
 ```python
             if other["due_date"] <= task["due_date"]:
@@ -3161,7 +3737,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L235
+#### L284
 
 ```python
                 cumulative = cumulative + other["remaining_hours"]
@@ -3172,7 +3748,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `cumulative` = ชั่วโมงงานสะสมถึงกำหนดส่งที่ตรวจ
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L236
+#### L285
 
 ```python
         task["cumulative_hours"] = round(cumulative, 2)
@@ -3183,7 +3759,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `cumulative` = ชั่วโมงงานสะสมถึงกำหนดส่งที่ตรวจ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L237
+#### L286
 
 ```python
         task["available_daily"] = hours
@@ -3194,7 +3770,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L238
+#### L287
 
 ```python
         task["at_risk"] = False
@@ -3205,7 +3781,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `False` = boolean เท็จ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L239
+#### L288
 
 ```python
         if task["days_left"] < 0:
@@ -3216,7 +3792,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L240
+#### L289
 
 ```python
             task["plan_status"] = "เกินกำหนด"
@@ -3227,7 +3803,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L241
+#### L290
 
 ```python
             task["plan_icon"] = "!"
@@ -3238,7 +3814,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L242
+#### L291
 
 ```python
             task["plan_tone"] = "bad"
@@ -3249,7 +3825,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L243
+#### L292
 
 ```python
             task["gap"] = task["remaining_hours"]
@@ -3260,7 +3836,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L244
+#### L293
 
 ```python
             task["hours_per_day"] = task["remaining_hours"]
@@ -3271,7 +3847,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L245
+#### L294
 
 ```python
             task["shortfall_per_day"] = 0
@@ -3282,7 +3858,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L246
+#### L295
 
 ```python
             task["available_hours"] = 0
@@ -3293,7 +3869,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L247
+#### L296
 
 ```python
             task["at_risk"] = True
@@ -3304,7 +3880,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `True` = boolean จริง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L248
+#### L297
 
 ```python
         else:
@@ -3314,7 +3890,7 @@ def annotate_plan(items, hours):
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L249
+#### L298
 
 ```python
             days = task["days_left"] + 1
@@ -3325,7 +3901,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L250
+#### L299
 
 ```python
             capacity = days * hours - spent
@@ -3336,7 +3912,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `capacity` = ชั่วโมงความจุที่ยังมีถึงวันส่งหลังหักเวลา work วันนี้; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `spent` = work วันนี้ที่ถูก cap ไม่เกินงบรายวัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L251
+#### L300
 
 ```python
             required = (cumulative + spent) / days
@@ -3347,7 +3923,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท; `cumulative` = ชั่วโมงงานสะสมถึงกำหนดส่งที่ตรวจ; `spent` = work วันนี้ที่ถูก cap ไม่เกินงบรายวัน; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L252
+#### L301
 
 ```python
             raw_gap = max(0, cumulative - capacity)
@@ -3358,7 +3934,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `max` = เลือกค่ามากที่สุด; `cumulative` = ชั่วโมงงานสะสมถึงกำหนดส่งที่ตรวจ; `capacity` = ชั่วโมงความจุที่ยังมีถึงวันส่งหลังหักเวลา work วันนี้
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L253
+#### L302
 
 ```python
             task["available_hours"] = round(capacity, 2)
@@ -3369,7 +3945,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `capacity` = ชั่วโมงความจุที่ยังมีถึงวันส่งหลังหักเวลา work วันนี้
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L254
+#### L303
 
 ```python
             task["hours_per_day"] = ceil_tenth(required)
@@ -3380,7 +3956,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L255
+#### L304
 
 ```python
             task["gap"] = ceil_tenth(raw_gap)
@@ -3391,7 +3967,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L256
+#### L305
 
 ```python
             task["shortfall_per_day"] = ceil_tenth(max(0, required - hours))
@@ -3402,7 +3978,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `max` = เลือกค่ามากที่สุด; `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L257
+#### L306
 
 ```python
             task["plan_status"] = "ตามแผน"
@@ -3413,7 +3989,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L258
+#### L307
 
 ```python
             task["plan_icon"] = "✓"
@@ -3424,7 +4000,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L259
+#### L308
 
 ```python
             task["plan_tone"] = "good"
@@ -3435,7 +4011,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L260
+#### L309
 
 ```python
             if raw_gap > 0.000000001:
@@ -3445,7 +4021,7 @@ def annotate_plan(items, hours):
 - เครื่องหมาย: `>` มากกว่า; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L261
+#### L310
 
 ```python
                 task["plan_status"] = "เวลาไม่พอ"
@@ -3456,7 +4032,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L262
+#### L311
 
 ```python
                 task["plan_icon"] = "!"
@@ -3467,7 +4043,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L263
+#### L312
 
 ```python
                 task["plan_tone"] = "bad"
@@ -3478,7 +4054,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L264
+#### L313
 
 ```python
                 task["at_risk"] = True
@@ -3489,7 +4065,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `True` = boolean จริง
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L265
+#### L314
 
 ```python
         if task["at_risk"]:
@@ -3500,7 +4076,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L266
+#### L315
 
 ```python
             risk_count = risk_count + 1
@@ -3511,7 +4087,7 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `risk_count` = จำนวนงานที่ at_risk จริง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L267
+#### L316
 
 ```python
     return ordered, risk_count
@@ -3522,19 +4098,19 @@ def annotate_plan(items, hours):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์; `risk_count` = จำนวนงานที่ at_risk จริง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L268
+#### L317
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L269
+#### L318
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L270
+#### L319
 
 ```python
 def today_plan(pending, budget):
@@ -3544,7 +4120,7 @@ def today_plan(pending, budget):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `pending` = รายการงานที่ remaining>0; `budget` = งบเวลาที่ยังแบ่งให้รายการถัดไปได้
 
-#### L271
+#### L320
 
 ```python
     ordered = order_items(pending)
@@ -3555,7 +4131,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์; `pending` = รายการงานที่ remaining>0
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L272
+#### L321
 
 ```python
     recommendations = []
@@ -3566,7 +4142,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `recommendations` = งานที่ได้รับการจัดสรรเวลาเพิ่มวันนี้
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L273
+#### L322
 
 ```python
     for task in ordered:
@@ -3577,7 +4153,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `ordered` = รายการหลังเรียงตามเกณฑ์
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L274
+#### L323
 
 ```python
         task["today_hours"] = 0
@@ -3588,7 +4164,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L275
+#### L324
 
 ```python
         task["reasons"] = []
@@ -3599,7 +4175,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L276
+#### L325
 
 ```python
         if task["days_left"] < 0:
@@ -3610,7 +4186,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L277
+#### L326
 
 ```python
             task["reasons"].append("เกินกำหนดแล้ว ควรติดต่อผู้สอนและจัดการก่อน")
@@ -3621,7 +4197,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `append` = เพิ่มหนึ่งรายการต่อท้าย list
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L278
+#### L327
 
 ```python
         elif task["days_left"] <= 3:
@@ -3632,7 +4208,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L279
+#### L328
 
 ```python
             task["reasons"].append("ใกล้ถึงกำหนด ควรเริ่มก่อน")
@@ -3643,7 +4219,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `append` = เพิ่มหนึ่งรายการต่อท้าย list
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L280
+#### L329
 
 ```python
         if task["remaining_hours"] >= 6:
@@ -3654,7 +4230,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L281
+#### L330
 
 ```python
             task["reasons"].append("ใช้เวลามาก ควรแบ่งเป็นงานย่อย")
@@ -3665,7 +4241,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `append` = เพิ่มหนึ่งรายการต่อท้าย list
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L282
+#### L331
 
 ```python
         if task["at_risk"]:
@@ -3676,7 +4252,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L283
+#### L332
 
 ```python
             task["reasons"].append("งานนี้เสี่ยงไม่ทันเมื่อเทียบกับเวลาที่มี")
@@ -3687,7 +4263,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `append` = เพิ่มหนึ่งรายการต่อท้าย list
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L284
+#### L333
 
 ```python
         if task["priority"] == "high":
@@ -3698,7 +4274,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L285
+#### L334
 
 ```python
             task["reasons"].append("ตั้งความสำคัญไว้สูง")
@@ -3709,7 +4285,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `append` = เพิ่มหนึ่งรายการต่อท้าย list
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L286
+#### L335
 
 ```python
         if not task["reasons"]:
@@ -3720,7 +4296,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L287
+#### L336
 
 ```python
             task["reasons"].append("วันส่งใกล้ที่สุดในงานที่เหลือ")
@@ -3731,7 +4307,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `append` = เพิ่มหนึ่งรายการต่อท้าย list
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L288
+#### L337
 
 ```python
         if budget > 0.000000001:
@@ -3742,7 +4318,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `budget` = งบเวลาที่ยังแบ่งให้รายการถัดไปได้
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L289
+#### L338
 
 ```python
             task["today_hours"] = round(min(task["remaining_hours"], budget), 2)
@@ -3753,7 +4329,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `min` = เลือกค่าน้อยที่สุด; `budget` = งบเวลาที่ยังแบ่งให้รายการถัดไปได้
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L290
+#### L339
 
 ```python
             budget = round(max(0, budget - task["today_hours"]), 2)
@@ -3764,7 +4340,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `budget` = งบเวลาที่ยังแบ่งให้รายการถัดไปได้; `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `max` = เลือกค่ามากที่สุด; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L291
+#### L340
 
 ```python
             recommendations.append(task)
@@ -3775,7 +4351,7 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `recommendations` = งานที่ได้รับการจัดสรรเวลาเพิ่มวันนี้; `append` = เพิ่มหนึ่งรายการต่อท้าย list; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L292
+#### L341
 
 ```python
     return ordered, recommendations
@@ -3786,19 +4362,19 @@ def today_plan(pending, budget):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์; `recommendations` = งานที่ได้รับการจัดสรรเวลาเพิ่มวันนี้
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L293
+#### L342
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L294
+#### L343
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L295
+#### L344
 
 ```python
 def overview(rows, hours):
@@ -3808,7 +4384,7 @@ def overview(rows, hours):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `rows` = list ข้อมูลงานจาก storage; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 
-#### L296
+#### L345
 
 ```python
     members = team_data()["members"]
@@ -3819,7 +4395,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `members` = list สมาชิกจาก team.json
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L297
+#### L346
 
 ```python
     items = all_views(rows, members)
@@ -3830,7 +4406,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `items` = list ของข้อมูลแสดงผล; `rows` = list ข้อมูลงานจาก storage; `members` = list สมาชิกจาก team.json
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L298
+#### L347
 
 ```python
     pending, risk_count = annotate_plan(items, hours)
@@ -3841,7 +4417,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `pending` = รายการงานที่ remaining>0; `risk_count` = จำนวนงานที่ at_risk จริง; `items` = list ของข้อมูลแสดงผล; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L299
+#### L348
 
 ```python
     actual_today = worked_today(items)
@@ -3852,7 +4428,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `actual_today` = ชั่วโมงประวัติ work ของวันนี้; `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L300
+#### L349
 
 ```python
     today_remaining = round(max(0, hours - actual_today), 2)
@@ -3863,7 +4439,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `today_remaining` = เวลางบวันนี้ที่ยังจัดสรรเพิ่มได้; `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `max` = เลือกค่ามากที่สุด; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `actual_today` = ชั่วโมงประวัติ work ของวันนี้
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L301
+#### L350
 
 ```python
     ordered, recommendations = today_plan(pending, today_remaining)
@@ -3874,7 +4450,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์; `recommendations` = งานที่ได้รับการจัดสรรเวลาเพิ่มวันนี้; `pending` = รายการงานที่ remaining>0; `today_remaining` = เวลางบวันนี้ที่ยังจัดสรรเพิ่มได้
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L302
+#### L351
 
 ```python
     completed = []
@@ -3885,7 +4461,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `completed` = รายการงานที่ remaining=0
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L303
+#### L352
 
 ```python
     soon_count = 0
@@ -3896,7 +4472,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `soon_count` = งานค้างส่งวันนี้ถึงอีก 3 วัน ไม่รวมเกินกำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L304
+#### L353
 
 ```python
     overdue_count = 0
@@ -3907,7 +4483,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `overdue_count` = จำนวนงานค้างที่วันส่งก่อนวันนี้
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L305
+#### L354
 
 ```python
     stale_count = 0
@@ -3918,7 +4494,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `stale_count` = จำนวนงานค้างที่ไม่มีวันอัปเดต/ผ่านอย่างน้อย 2 วัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L306
+#### L355
 
 ```python
     remaining_total = 0
@@ -3929,7 +4505,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `remaining_total` = ผลรวมชั่วโมงคงเหลือ pending
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L307
+#### L356
 
 ```python
     for item in items:
@@ -3940,7 +4516,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L308
+#### L357
 
 ```python
         if item["remaining_hours"] == 0:
@@ -3951,7 +4527,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L309
+#### L358
 
 ```python
             completed.append(item)
@@ -3962,7 +4538,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `completed` = รายการงานที่ remaining=0; `append` = เพิ่มหนึ่งรายการต่อท้าย list; `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L310
+#### L359
 
 ```python
         else:
@@ -3972,7 +4548,7 @@ def overview(rows, hours):
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L311
+#### L360
 
 ```python
             remaining_total = remaining_total + item["remaining_hours"]
@@ -3983,7 +4559,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `remaining_total` = ผลรวมชั่วโมงคงเหลือ pending; `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L312
+#### L361
 
 ```python
             if item["days_left"] < 0:
@@ -3994,7 +4570,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L313
+#### L362
 
 ```python
                 overdue_count = overdue_count + 1
@@ -4005,7 +4581,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `overdue_count` = จำนวนงานค้างที่วันส่งก่อนวันนี้
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L314
+#### L363
 
 ```python
             elif item["days_left"] <= 3:
@@ -4016,7 +4592,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L315
+#### L364
 
 ```python
                 soon_count = soon_count + 1
@@ -4027,7 +4603,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `soon_count` = งานค้างส่งวันนี้ถึงอีก 3 วัน ไม่รวมเกินกำหนด
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L316
+#### L365
 
 ```python
             if item["stale"]:
@@ -4038,7 +4614,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L317
+#### L366
 
 ```python
                 stale_count = stale_count + 1
@@ -4049,7 +4625,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `stale_count` = จำนวนงานค้างที่ไม่มีวันอัปเดต/ผ่านอย่างน้อย 2 วัน
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L318
+#### L367
 
 ```python
     focus = None
@@ -4060,7 +4636,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `focus` = งาน pending แรกตามความเร่งด่วน หรือ None; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L319
+#### L368
 
 ```python
     if ordered:
@@ -4071,7 +4647,7 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L320
+#### L369
 
 ```python
         focus = ordered[0]
@@ -4082,96 +4658,107 @@ def overview(rows, hours):
 - ชื่อที่ต้องรู้: `focus` = งาน pending แรกตามความเร่งด่วน หรือ None; `ordered` = รายการหลังเรียงตามเกณฑ์
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L321
+#### L370
 
 ```python
     return {"items": ordered, "completed": completed, "all_items": items,
 ```
 
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`, `'notice'`
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์; `completed` = รายการงานที่ remaining=0; `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L322
+#### L371
 
 ```python
             "recommendations": recommendations, "focus": focus,
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L321: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L370: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`, `'notice'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `recommendations` = งานที่ได้รับการจัดสรรเวลาเพิ่มวันนี้; `focus` = งาน pending แรกตามความเร่งด่วน หรือ None
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L323
+#### L372
 
 ```python
             "open_count": len(ordered), "completed_count": len(completed),
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L321: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L370: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`, `'notice'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `len` = จำนวนสมาชิก/อักขระ; `ordered` = รายการหลังเรียงตามเกณฑ์; `completed` = รายการงานที่ remaining=0
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L324
+#### L373
 
 ```python
             "soon_count": soon_count, "overdue_count": overdue_count,
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L321: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L370: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`, `'notice'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `soon_count` = งานค้างส่งวันนี้ถึงอีก 3 วัน ไม่รวมเกินกำหนด; `overdue_count` = จำนวนงานค้างที่วันส่งก่อนวันนี้
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L325
+#### L374
 
 ```python
             "remaining_total": round(remaining_total, 2), "risk_count": risk_count,
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L321: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L370: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`, `'notice'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `remaining_total` = ผลรวมชั่วโมงคงเหลือ pending; `risk_count` = จำนวนงานที่ at_risk จริง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L326
+#### L375
 
 ```python
             "daily_hours": hours, "stale_count": stale_count,
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L321: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L370: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`, `'notice'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `stale_count` = จำนวนงานค้างที่ไม่มีวันอัปเดต/ผ่านอย่างน้อย 2 วัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L327
+#### L376
 
 ```python
-            "actual_today": actual_today, "today_remaining": today_remaining}
+            "actual_today": actual_today, "today_remaining": today_remaining,
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L321: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`
-- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L370: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`, `'notice'`
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `actual_today` = ชั่วโมงประวัติ work ของวันนี้; `today_remaining` = เวลางบวันนี้ที่ยังจัดสรรเพิ่มได้
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L328
+#### L377
+
+```python
+            "notice": STORAGE_NOTICE}
+```
+
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L370: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'items'`, `'completed'`, `'all_items'`, `'recommendations'`, `'focus'`, `'open_count'`, `'completed_count'`, `'soon_count'`, `'overdue_count'`, `'remaining_total'`, `'risk_count'`, `'daily_hours'`, `'stale_count'`, `'actual_today'`, `'today_remaining'`, `'notice'`
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set
+- ชื่อที่ต้องรู้: `STORAGE_NOTICE` = ข้อความสถานะพื้นที่เก็บข้อมูลที่ initializer คืน ว่างเมื่อใช้พื้นที่โครงการหรือพื้นที่ที่กำหนดเอง
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L378
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L329
+#### L379
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L330
+#### L380
 
 ```python
 def record_history(row, hours, kind, on_date, note=""):
@@ -4181,7 +4768,7 @@ def record_history(row, hours, kind, on_date, note=""):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `kind` = ชนิด event work/adjustment/complete/reopen; `on_date` = วันที่ทำงานที่ผู้ใช้เลือก; `note` = หมายเหตุของประวัติ
 
-#### L331
+#### L381
 
 ```python
     details = details_of(row)
@@ -4192,7 +4779,7 @@ def record_history(row, hours, kind, on_date, note=""):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L332
+#### L382
 
 ```python
     details["history"].append({"date": on_date, "hours": round(hours, 2),
@@ -4203,18 +4790,18 @@ def record_history(row, hours, kind, on_date, note=""):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `append` = เพิ่มหนึ่งรายการต่อท้าย list; `on_date` = วันที่ทำงานที่ผู้ใช้เลือก; `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L333
+#### L383
 
 ```python
                                "kind": kind, "note": note})
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L332: เพิ่ม dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'` ไปท้าย `details['history']` (อ่าน key/index)
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L382: เพิ่ม dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'` ไปท้าย `details['history']` (อ่าน key/index)
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `kind` = ชนิด event work/adjustment/complete/reopen; `note` = หมายเหตุของประวัติ
 - ย่อหน้า 31 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L334
+#### L384
 
 ```python
     details["started"] = True
@@ -4225,7 +4812,7 @@ def record_history(row, hours, kind, on_date, note=""):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `True` = boolean จริง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L335
+#### L385
 
 ```python
     details["progress_on"] = date.today().isoformat()
@@ -4236,7 +4823,7 @@ def record_history(row, hours, kind, on_date, note=""):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L336
+#### L386
 
 ```python
     row["details"] = details
@@ -4247,19 +4834,19 @@ def record_history(row, hours, kind, on_date, note=""):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L337
+#### L387
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L338
+#### L388
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L339
+#### L389
 
 ```python
 def row_index(form, rows):
@@ -4269,7 +4856,7 @@ def row_index(form, rows):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `rows` = list ข้อมูลงานจาก storage
 
-#### L340
+#### L390
 
 ```python
     text = str(form.get("no", ""))
@@ -4280,7 +4867,7 @@ def row_index(form, rows):
 - ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize; `str` = แปลงเป็นข้อความ; `form` = dict ของข้อมูลฟอร์ม POST; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L341
+#### L391
 
 ```python
     if text == "" or not text.isascii() or not text.isdigit() or len(text) > 8:
@@ -4291,7 +4878,7 @@ def row_index(form, rows):
 - ชื่อที่ต้องรู้: `text` = ข้อความก่อนแปลงหรือ serialize; `isascii` = ตรวจอักขระอยู่ใน ASCII; `isdigit` = ตรวจว่าเป็นกลุ่มตัวเลข; ใน no ใช้คู่ isascii ป้องกัน unicode digit; `len` = จำนวนสมาชิก/อักขระ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L342
+#### L392
 
 ```python
         return None
@@ -4301,7 +4888,7 @@ def row_index(form, rows):
 - ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L343
+#### L393
 
 ```python
     index = int(text)
@@ -4312,7 +4899,7 @@ def row_index(form, rows):
 - ชื่อที่ต้องรู้: `index` = ตำแหน่งที่ผ่านตรวจขอบเขต; `int` = แปลงเป็นจำนวนเต็ม ตัดเศษของเลขบวกใน progress; `text` = ข้อความก่อนแปลงหรือ serialize
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L344
+#### L394
 
 ```python
     if index >= len(rows):
@@ -4323,7 +4910,7 @@ def row_index(form, rows):
 - ชื่อที่ต้องรู้: `index` = ตำแหน่งที่ผ่านตรวจขอบเขต; `len` = จำนวนสมาชิก/อักขระ; `rows` = list ข้อมูลงานจาก storage
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L345
+#### L395
 
 ```python
         return None
@@ -4333,7 +4920,7 @@ def row_index(form, rows):
 - ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L346
+#### L396
 
 ```python
     if form.get("version", "") != version_of(rows[index]):
@@ -4344,7 +4931,7 @@ def row_index(form, rows):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key; `rows` = list ข้อมูลงานจาก storage; `index` = ตำแหน่งที่ผ่านตรวจขอบเขต
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L347
+#### L397
 
 ```python
         return None
@@ -4354,7 +4941,7 @@ def row_index(form, rows):
 - ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L348
+#### L398
 
 ```python
     return index
@@ -4364,19 +4951,19 @@ def row_index(form, rows):
 - ชื่อที่ต้องรู้: `index` = ตำแหน่งที่ผ่านตรวจขอบเขต
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L349
+#### L399
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L350
+#### L400
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L351
+#### L401
 
 ```python
 def quick_action(form):
@@ -4386,7 +4973,7 @@ def quick_action(form):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 
-#### L352
+#### L402
 
 ```python
     """Shared transitions from Overview, Manage, and Plan."""
@@ -4395,7 +4982,7 @@ def quick_action(form):
 - ข้อความ docstring อธิบาย module/function ไม่ใช่คำสั่งบันทึกงาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L353
+#### L403
 
 ```python
     rows = storage.load()
@@ -4406,7 +4993,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `rows` = list ข้อมูลงานจาก storage; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L354
+#### L404
 
 ```python
     index = row_index(form, rows)
@@ -4417,7 +5004,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `index` = ตำแหน่งที่ผ่านตรวจขอบเขต; `form` = dict ของข้อมูลฟอร์ม POST; `rows` = list ข้อมูลงานจาก storage
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L355
+#### L405
 
 ```python
     if index is None:
@@ -4428,7 +5015,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `index` = ตำแหน่งที่ผ่านตรวจขอบเขต; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L356
+#### L406
 
 ```python
         return "✗ รายการเปลี่ยนไปแล้ว กรุณาโหลดหน้าใหม่แล้วลองอีกครั้ง"
@@ -4437,7 +5024,7 @@ def quick_action(form):
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'✗ รายการเปลี่ยนไปแล้ว กรุณาโหลดหน้าใหม่แล้วลองอีกครั้ง'`
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L357
+#### L407
 
 ```python
     row = rows[index]
@@ -4448,7 +5035,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `rows` = list ข้อมูลงานจาก storage; `index` = ตำแหน่งที่ผ่านตรวจขอบเขต
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L358
+#### L408
 
 ```python
     details = details_of(row)
@@ -4459,7 +5046,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L359
+#### L409
 
 ```python
     action = form.get("action", "")
@@ -4470,7 +5057,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L360
+#### L410
 
 ```python
     remaining = max(0, row["estimated_hours"] - row["done_hours"])
@@ -4481,7 +5068,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท; `max` = เลือกค่ามากที่สุด; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L361
+#### L411
 
 ```python
     if action == "start":
@@ -4491,7 +5078,7 @@ def quick_action(form):
 - เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L362
+#### L412
 
 ```python
         if remaining == 0:
@@ -4502,7 +5089,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L363
+#### L413
 
 ```python
             return "✗ งานนี้เสร็จแล้ว"
@@ -4511,7 +5098,7 @@ def quick_action(form):
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'✗ งานนี้เสร็จแล้ว'`
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L364
+#### L414
 
 ```python
         details["started"] = True
@@ -4522,7 +5109,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `True` = boolean จริง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L365
+#### L415
 
 ```python
         details["progress_on"] = date.today().isoformat()
@@ -4533,7 +5120,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L366
+#### L416
 
 ```python
         row["details"] = details
@@ -4544,7 +5131,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L367
+#### L417
 
 ```python
         message = "✓ เริ่มงานนี้แล้ว เปิดหน้าจัดการงานเพื่อบันทึกเวลาและงานย่อย"
@@ -4555,7 +5142,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `message` = ข้อความคืนให้ app แสดง banner
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L368
+#### L418
 
 ```python
     elif action == "complete":
@@ -4565,7 +5152,7 @@ def quick_action(form):
 - เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L369
+#### L419
 
 ```python
         if remaining == 0:
@@ -4576,7 +5163,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L370
+#### L420
 
 ```python
             return "✓ งานนี้เสร็จแล้ว"
@@ -4585,7 +5172,7 @@ def quick_action(form):
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'✓ งานนี้เสร็จแล้ว'`
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L371
+#### L421
 
 ```python
         details["before_complete"] = row["done_hours"]
@@ -4596,7 +5183,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L372
+#### L422
 
 ```python
         details["subtasks_before_complete"] = []
@@ -4607,7 +5194,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L373
+#### L423
 
 ```python
         for subtask in details["subtasks"]:
@@ -4618,7 +5205,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L374
+#### L424
 
 ```python
             details["subtasks_before_complete"].append(subtask.get("done", False))
@@ -4629,7 +5216,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `append` = เพิ่มหนึ่งรายการต่อท้าย list; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key; `False` = boolean เท็จ
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L375
+#### L425
 
 ```python
             subtask["done"] = True
@@ -4640,7 +5227,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `True` = boolean จริง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L376
+#### L426
 
 ```python
         details["completed_on"] = date.today().isoformat()
@@ -4651,7 +5238,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L377
+#### L427
 
 ```python
         row["details"] = details
@@ -4662,7 +5249,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L378
+#### L428
 
 ```python
         row["done_hours"] = row["estimated_hours"]
@@ -4673,7 +5260,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L379
+#### L429
 
 ```python
         record_history(row, remaining, "complete", date.today().isoformat(),
@@ -4684,17 +5271,17 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L380
+#### L430
 
 ```python
                        "ปิดงานตามเวลาประมาณ ไม่ใช่ชั่วโมงทำงานจริง")
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L379: เรียก `record_history`: เติม event ลง row ในหน่วยความจำ ปรับ started/progress_on; ไม่เรียก storage.save เอง
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L429: เรียก `record_history`: เติม event ลง row ในหน่วยความจำ ปรับ started/progress_on; ไม่เรียก storage.save เอง
 - เครื่องหมาย: `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 23 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L381
+#### L431
 
 ```python
         message = "✓ ทำเครื่องหมายว่าเสร็จแล้ว งานย้ายไปหมวดเสร็จแล้ว"
@@ -4705,7 +5292,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `message` = ข้อความคืนให้ app แสดง banner
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L382
+#### L432
 
 ```python
     elif action == "reopen":
@@ -4715,7 +5302,7 @@ def quick_action(form):
 - เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L383
+#### L433
 
 ```python
         if remaining > 0 or "before_complete" not in details:
@@ -4726,7 +5313,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `remaining` = ชั่วโมงคงเหลือหรือรายการที่เหลือในการเรียงตามบริบท; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L384
+#### L434
 
 ```python
             return "✗ ยกเลิกได้เฉพาะงานที่กดทำเครื่องหมายเสร็จแล้ว หากต้องปรับเวลาทำจริงให้แก้ไขข้อมูลงาน"
@@ -4735,7 +5322,7 @@ def quick_action(form):
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'✗ ยกเลิกได้เฉพาะงานที่กดทำเครื่องหมายเสร็จแล้ว หากต้องปรับเวลาทำจริงให้แก้ไขข้อมูลงาน'`
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L385
+#### L435
 
 ```python
         row["done_hours"] = min(row["estimated_hours"],
@@ -4746,18 +5333,18 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `min` = เลือกค่าน้อยที่สุด
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L386
+#### L436
 
 ```python
                                 details["before_complete"])
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L385: เก็บผล `min`(`row['estimated_hours']` (อ่าน key/index), `details['before_complete']` (อ่าน key/index)) ลง `row['done_hours']`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L435: เก็บผล `min`(`row['estimated_hours']` (อ่าน key/index), `details['before_complete']` (อ่าน key/index)) ลง `row['done_hours']`
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 32 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L387
+#### L437
 
 ```python
         if row["done_hours"] >= row["estimated_hours"]:
@@ -4768,7 +5355,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L388
+#### L438
 
 ```python
             row["done_hours"] = 0
@@ -4779,7 +5366,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L389
+#### L439
 
 ```python
         previous = details.pop("subtasks_before_complete", [])
@@ -4790,7 +5377,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `previous` = row/ค่าก่อนเปลี่ยน หรือสถานะงานย่อยก่อนปิดตามบริบท; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `pop` = ลบ key หรือ index และคืนค่า; หาก dict ให้ default ใช้เมื่อไม่พบ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L390
+#### L440
 
 ```python
         position = 0
@@ -4801,7 +5388,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `position` = ตัวนับตำแหน่งงานเริ่ม 0
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L391
+#### L441
 
 ```python
         for subtask in details["subtasks"]:
@@ -4812,7 +5399,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L392
+#### L442
 
 ```python
             if position < len(previous):
@@ -4823,7 +5410,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `position` = ตัวนับตำแหน่งงานเริ่ม 0; `len` = จำนวนสมาชิก/อักขระ; `previous` = row/ค่าก่อนเปลี่ยน หรือสถานะงานย่อยก่อนปิดตามบริบท
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L393
+#### L443
 
 ```python
                 subtask["done"] = previous[position]
@@ -4834,7 +5421,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `previous` = row/ค่าก่อนเปลี่ยน หรือสถานะงานย่อยก่อนปิดตามบริบท; `position` = ตัวนับตำแหน่งงานเริ่ม 0
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L394
+#### L444
 
 ```python
             position = position + 1
@@ -4845,7 +5432,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `position` = ตัวนับตำแหน่งงานเริ่ม 0
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L395
+#### L445
 
 ```python
         details.pop("completed_on", None)
@@ -4856,7 +5443,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `pop` = ลบ key หรือ index และคืนค่า; หาก dict ให้ default ใช้เมื่อไม่พบ; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L396
+#### L446
 
 ```python
         details["started"] = True
@@ -4867,7 +5454,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว; `True` = boolean จริง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L397
+#### L447
 
 ```python
         row["details"] = details
@@ -4878,7 +5465,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `details` = dict รายละเอียดซ้อนที่สำเนาแล้ว
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L398
+#### L448
 
 ```python
         record_history(row, 0, "reopen", date.today().isoformat(), "เปิดงานกลับมาทำต่อ")
@@ -4889,7 +5476,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L399
+#### L449
 
 ```python
         message = "✓ เปิดงานกลับมาทำต่อแล้ว"
@@ -4900,7 +5487,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `message` = ข้อความคืนให้ app แสดง banner
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L400
+#### L450
 
 ```python
     else:
@@ -4910,7 +5497,7 @@ def quick_action(form):
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L401
+#### L451
 
 ```python
         return "✗ ไม่รู้จักคำสั่ง"
@@ -4919,7 +5506,7 @@ def quick_action(form):
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'✗ ไม่รู้จักคำสั่ง'`
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L402
+#### L452
 
 ```python
     storage.save(rows)
@@ -4930,7 +5517,7 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `rows` = list ข้อมูลงานจาก storage
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L403
+#### L453
 
 ```python
     return message
@@ -4940,19 +5527,19 @@ def quick_action(form):
 - ชื่อที่ต้องรู้: `message` = ข้อความคืนให้ app แสดง banner
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L404
+#### L454
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L405
+#### L455
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L406
+#### L456
 
 ```python
 def work_history(items):
@@ -4962,7 +5549,7 @@ def work_history(items):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `items` = list ของข้อมูลแสดงผล
 
-#### L407
+#### L457
 
 ```python
     history = []
@@ -4973,7 +5560,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `history` = ประวัติหลายรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L408
+#### L458
 
 ```python
     actual_total = 0
@@ -4984,7 +5571,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `actual_total` = ชั่วโมง work จริงที่มีบันทึกทั้งหมด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L409
+#### L459
 
 ```python
     for item in items:
@@ -4995,7 +5582,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน; `items` = list ของข้อมูลแสดงผล
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L410
+#### L460
 
 ```python
         for entry in item["details"]["history"]:
@@ -5006,7 +5593,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง; `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L411
+#### L461
 
 ```python
             line = dict(entry)
@@ -5017,7 +5604,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `dict` = ชนิด map; dict(row) เป็นสำเนาระดับบน; `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L412
+#### L462
 
 ```python
             line["title"] = item["title"]
@@ -5028,7 +5615,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L413
+#### L463
 
 ```python
             line["course"] = item["course"]
@@ -5039,7 +5626,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L414
+#### L464
 
 ```python
             line["owner_name"] = item["owner_name"]
@@ -5050,7 +5637,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `item` = dict สำหรับแสดงผล/รายการที่กำลังวนตามบริบทฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L415
+#### L465
 
 ```python
             line["label"] = "บันทึกเวลาทำงาน"
@@ -5060,7 +5647,7 @@ def work_history(items):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L416
+#### L466
 
 ```python
             if entry["kind"] == "work":
@@ -5071,7 +5658,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L417
+#### L467
 
 ```python
                 actual_total = actual_total + entry["hours"]
@@ -5082,7 +5669,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `actual_total` = ชั่วโมง work จริงที่มีบันทึกทั้งหมด; `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L418
+#### L468
 
 ```python
             elif entry["kind"] == "complete":
@@ -5093,7 +5680,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L419
+#### L469
 
 ```python
                 line["label"] = "ปิดงานตามเวลาประมาณ"
@@ -5103,7 +5690,7 @@ def work_history(items):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L420
+#### L470
 
 ```python
             elif entry["kind"] == "adjustment":
@@ -5114,7 +5701,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L421
+#### L471
 
 ```python
                 line["label"] = "ปรับยอดความคืบหน้า"
@@ -5124,7 +5711,7 @@ def work_history(items):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L422
+#### L472
 
 ```python
             elif entry["kind"] == "reopen":
@@ -5135,7 +5722,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L423
+#### L473
 
 ```python
                 line["label"] = "เปิดงานอีกครั้ง"
@@ -5145,7 +5732,7 @@ def work_history(items):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L424
+#### L474
 
 ```python
             history.append(line)
@@ -5156,7 +5743,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `history` = ประวัติหลายรายการ; `append` = เพิ่มหนึ่งรายการต่อท้าย list
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L425
+#### L475
 
 ```python
     ordered = []
@@ -5167,7 +5754,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L426
+#### L476
 
 ```python
     while history:
@@ -5178,7 +5765,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `history` = ประวัติหลายรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L427
+#### L477
 
 ```python
         latest = history[0]
@@ -5189,7 +5776,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `latest` = ประวัติที่มีวันที่ใหม่ที่สุดในรอบเลือก; `history` = ประวัติหลายรายการ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L428
+#### L478
 
 ```python
         for entry in history:
@@ -5200,7 +5787,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง; `history` = ประวัติหลายรายการ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L429
+#### L479
 
 ```python
             if entry["date"] > latest["date"]:
@@ -5211,7 +5798,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง; `latest` = ประวัติที่มีวันที่ใหม่ที่สุดในรอบเลือก
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L430
+#### L480
 
 ```python
                 latest = entry
@@ -5222,7 +5809,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `latest` = ประวัติที่มีวันที่ใหม่ที่สุดในรอบเลือก; `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L431
+#### L481
 
 ```python
         ordered.append(latest)
@@ -5233,7 +5820,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์; `append` = เพิ่มหนึ่งรายการต่อท้าย list; `latest` = ประวัติที่มีวันที่ใหม่ที่สุดในรอบเลือก
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L432
+#### L482
 
 ```python
         history.remove(latest)
@@ -5244,7 +5831,7 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `history` = ประวัติหลายรายการ; `remove` = เอารายการที่เท่ากับค่าที่ให้หนึ่งรายการออกจาก list; `latest` = ประวัติที่มีวันที่ใหม่ที่สุดในรอบเลือก
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L433
+#### L483
 
 ```python
     return ordered, round(actual_total, 2)
@@ -5255,19 +5842,19 @@ def work_history(items):
 - ชื่อที่ต้องรู้: `ordered` = รายการหลังเรียงตามเกณฑ์; `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `actual_total` = ชั่วโมง work จริงที่มีบันทึกทั้งหมด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L434
+#### L484
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L435
+#### L485
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L436
+#### L486
 
 ```python
 def daily_history(history):
@@ -5277,7 +5864,7 @@ def daily_history(history):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `history` = ประวัติหลายรายการ
 
-#### L437
+#### L487
 
 ```python
     days = []
@@ -5288,7 +5875,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L438
+#### L488
 
 ```python
     for entry in history:
@@ -5299,7 +5886,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง; `history` = ประวัติหลายรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L439
+#### L489
 
 ```python
         if entry["kind"] != "work":
@@ -5310,7 +5897,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L440
+#### L490
 
 ```python
             continue
@@ -5319,7 +5906,7 @@ def daily_history(history):
 - ข้ามส่วนที่เหลือของรอบนี้และไปสมาชิกถัดไป
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L441
+#### L491
 
 ```python
         existing = None
@@ -5330,7 +5917,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `existing` = สรุปวันที่พบแล้ว หรือ None; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L442
+#### L492
 
 ```python
         for day in days:
@@ -5341,7 +5928,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `day` = สรุปวันที่หนึ่งใน daily_history; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L443
+#### L493
 
 ```python
             if day["date"] == entry["date"]:
@@ -5352,7 +5939,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `day` = สรุปวันที่หนึ่งใน daily_history; `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L444
+#### L494
 
 ```python
                 existing = day
@@ -5363,7 +5950,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `existing` = สรุปวันที่พบแล้ว หรือ None; `day` = สรุปวันที่หนึ่งใน daily_history
 - ย่อหน้า 16 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L445
+#### L495
 
 ```python
         if existing is None:
@@ -5374,7 +5961,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `existing` = สรุปวันที่พบแล้ว หรือ None; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L446
+#### L496
 
 ```python
             existing = {"date": entry["date"], "hours": 0, "count": 0}
@@ -5385,7 +5972,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `existing` = สรุปวันที่พบแล้ว หรือ None; `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L447
+#### L497
 
 ```python
             days.append(existing)
@@ -5396,7 +5983,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `append` = เพิ่มหนึ่งรายการต่อท้าย list; `existing` = สรุปวันที่พบแล้ว หรือ None
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L448
+#### L498
 
 ```python
         existing["hours"] = round(existing["hours"] + entry["hours"], 2)
@@ -5407,7 +5994,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `existing` = สรุปวันที่พบแล้ว หรือ None; `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `entry` = รายการประวัติหนึ่งครั้ง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L449
+#### L499
 
 ```python
         existing["count"] = existing["count"] + 1
@@ -5418,7 +6005,7 @@ def daily_history(history):
 - ชื่อที่ต้องรู้: `existing` = สรุปวันที่พบแล้ว หรือ None
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L450
+#### L500
 
 ```python
     return days
@@ -5436,7 +6023,7 @@ def daily_history(history):
 
 ## pages/page1.py — Python ของหน้า Overview
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 23 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 23 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `b7d6819c28320d2c2c5a15095ca69d36a2e765fac6f7ade01947f37fb0e3f6c8`
 
@@ -5755,7 +6342,7 @@ def handle(form):
 
 ## pages/page2.py — Python ของหน้าจัดการงาน
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 173 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 173 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `074946470958f467465fbb85ca0cdfcc21e39bcd199c09eaa4e7e315a13f4fa6`
 
@@ -7855,9 +8442,9 @@ def handle(form):
 
 ## pages/page3.py — Python ของหน้า Plan
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 38 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 41 physical lines (รวมบรรทัดว่าง)
 
-**SHA-256 ของไฟล์จริง:** `47306d89220b9dafd6f27ac47969ea044932d9d9fad856d87978ac688dcecfd0`
+**SHA-256 ของไฟล์จริง:** `06f96a88064c539ce3ed76025db75e9c2be0875c1b5ea5cf4ba87e2b9911f821`
 
 **ผู้ศึกษา/บทบาท:** นายธีรเดช ฤทธิ์คำรพ · Page 3 / QA
 
@@ -7895,8 +8482,8 @@ def handle(form):
 
 | ชื่อ | บรรทัดจริง | หน้าที่ |
 |---|---|---|
-| `build` | L8–L26 | ประกาศฟังก์ชัน `build`: build เตรียม context จาก GET |
-| `handle` | L29–L38 | ประกาศฟังก์ชัน `handle`: handle รับฟอร์ม POST และคืนข้อความ |
+| `build` | L8–L29 | ประกาศฟังก์ชัน `build`: build เตรียม context จาก GET |
+| `handle` | L32–L41 | ประกาศฟังก์ชัน `handle`: handle รับฟอร์ม POST และคืนข้อความ |
 
 ### 6. ชื่อและคำศัพท์ที่พบใน Python
 
@@ -7951,7 +8538,10 @@ def build(query):
             hours = requested
     context = models.overview(storage.load(), hours)
     context["tasks"] = models.order_items(context["items"], "deadline")
-    context["notice"] = notice
+    if notice:
+        if context["notice"]:
+            notice = notice + " · " + context["notice"]
+        context["notice"] = notice
     required = 0
     for task in context["tasks"]:
         if task["days_left"] >= 0:
@@ -8153,15 +8743,48 @@ def build(query):
 #### L19
 
 ```python
-    context["notice"] = notice
+    if notice:
+```
+
+- ตรวจเงื่อนไข: `notice`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `notice` = ข้อความเตือนจาก build
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L20
+
+```python
+        if context["notice"]:
+```
+
+- ตรวจเงื่อนไข: `context['notice']` (อ่าน key/index); เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L21
+
+```python
+            notice = notice + " · " + context["notice"]
+```
+
+- เก็บผล ((`notice` บวก/ต่อ `' · '`) บวก/ต่อ `context['notice']` (อ่าน key/index)) ลง `notice`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `+` บวกเลข/ต่อข้อความตามชนิด; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ชื่อที่ต้องรู้: `notice` = ข้อความเตือนจาก build; `context` = dict ที่คืนให้ template
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L22
+
+```python
+        context["notice"] = notice
 ```
 
 - เก็บผล `notice` ลง `context['notice']`
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template; `notice` = ข้อความเตือนจาก build
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L20
+#### L23
 
 ```python
     required = 0
@@ -8172,7 +8795,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L21
+#### L24
 
 ```python
     for task in context["tasks"]:
@@ -8183,7 +8806,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `context` = dict ที่คืนให้ template
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L22
+#### L25
 
 ```python
         if task["days_left"] >= 0:
@@ -8194,7 +8817,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L23
+#### L26
 
 ```python
             required = max(required, task["hours_per_day"])
@@ -8205,7 +8828,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท; `max` = เลือกค่ามากที่สุด; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L24
+#### L27
 
 ```python
     context["required_daily"] = required
@@ -8216,7 +8839,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template; `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L25
+#### L28
 
 ```python
     context["daily_shortfall"] = models.ceil_tenth(max(0, required - hours))
@@ -8227,7 +8850,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template; `models` = module คลาสและฟังก์ชันกลาง; `max` = เลือกค่ามากที่สุด; `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L26
+#### L29
 
 ```python
     return context
@@ -8237,19 +8860,19 @@ def build(query):
 - ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L27
+#### L30
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L28
+#### L31
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-#### L29
+#### L32
 
 ```python
 def handle(form):
@@ -8259,7 +8882,7 @@ def handle(form):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 
-#### L30
+#### L33
 
 ```python
     if form.get("action", "") in ("start", "complete", "reopen"):
@@ -8270,7 +8893,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L31
+#### L34
 
 ```python
         return models.quick_action(form)
@@ -8281,7 +8904,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง; `form` = dict ของข้อมูลฟอร์ม POST
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L32
+#### L35
 
 ```python
     if form.get("action", "") != "save_hours":
@@ -8292,7 +8915,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L33
+#### L36
 
 ```python
         return "✗ ไม่รู้จักคำสั่ง"
@@ -8301,7 +8924,7 @@ def handle(form):
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'✗ ไม่รู้จักคำสั่ง'`
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L34
+#### L37
 
 ```python
     hours = models.daily_hours(form.get("hours", ""))
@@ -8312,7 +8935,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `models` = module คลาสและฟังก์ชันกลาง; `daily_hours` = เวลาว่างรายวันที่ตั้งไว้; `form` = dict ของข้อมูลฟอร์ม POST; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L35
+#### L38
 
 ```python
     if hours is None:
@@ -8323,7 +8946,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L36
+#### L39
 
 ```python
         return "✗ เวลาว่างต้องตั้งแต่ 0.1 ถึง 12 ชั่วโมงต่อวัน"
@@ -8332,7 +8955,7 @@ def handle(form):
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'✗ เวลาว่างต้องตั้งแต่ 0.1 ถึง 12 ชั่วโมงต่อวัน'`
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L37
+#### L40
 
 ```python
     models.save_daily_hours(hours)
@@ -8343,7 +8966,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L38
+#### L41
 
 ```python
     return "✓ บันทึกเวลาว่างแล้ว ภาพรวมและแผนใช้ค่านี้ร่วมกัน"
@@ -8360,9 +8983,9 @@ def handle(form):
 
 ## pages/team.py — Python ของหน้าทีม
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 64 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 64 physical lines (รวมบรรทัดว่าง)
 
-**SHA-256 ของไฟล์จริง:** `29d6c2d3dd3196c6aa1b37c57d1f41233314f6614028a8a0d9add6830bdef82a`
+**SHA-256 ของไฟล์จริง:** `414e93af02b7396dc0a2eba895ee876dd3bccd30ef2f4166003296f0215578e3`
 
 **ผู้ศึกษา/บทบาท:** ทีม CodeMind · อ่านข้อมูลบทบาทจริงจาก team.json
 
@@ -8413,6 +9036,7 @@ def handle(form):
 
 | ชื่อ | ความหมาย |
 |---|---|
+| `STORAGE_NOTICE` | ข้อความสถานะพื้นที่เก็บข้อมูลที่ initializer คืน ว่างเมื่อใช้พื้นที่โครงการหรือพื้นที่ที่กำหนดเอง |
 | `TITLE` | ชื่อหน้าสำหรับเมนูที่ app อ่าน |
 | `TITLES` | คำนำหน้าที่ตัดออกก่อนดึงอักษรชื่อ |
 | `all_views` | วน row ทีละรายการ เรียก task_view พร้อม position ตั้งแต่ 0 แล้วคืน list ใหม่ |
@@ -8521,7 +9145,7 @@ def build():
             unassigned.append(item)
     return {"group": data["group"], "members": members, "count": len(members),
             "unassigned": unassigned, "daily_hours": hours,
-            "weekly_capacity": round(hours * 7, 1)}
+            "weekly_capacity": round(hours * 7, 1), "notice": models.STORAGE_NOTICE}
 ```
 
 ### 8. คำอธิบายทุกบรรทัด
@@ -9147,7 +9771,7 @@ def build():
     return {"group": data["group"], "members": members, "count": len(members),
 ```
 
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`, `'notice'`
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `,` คั่นสมาชิก/argument; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `members` = list สมาชิกจาก team.json; `len` = จำนวนสมาชิก/อักขระ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
@@ -9158,7 +9782,7 @@ def build():
             "unassigned": unassigned, "daily_hours": hours,
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L62: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L62: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`, `'notice'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `unassigned` = pending ที่ owner ว่าง/ไม่ตรงรหัสสมาชิก; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
@@ -9166,12 +9790,12 @@ def build():
 #### L64
 
 ```python
-            "weekly_capacity": round(hours * 7, 1)}
+            "weekly_capacity": round(hours * 7, 1), "notice": models.STORAGE_NOTICE}
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L62: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`
-- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `(` เปิดกลุ่มนิพจน์/argument/tuple; `*` คูณ/ทำซ้ำข้อความ/ขยาย argument ตามตำแหน่ง; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `}` ปิด dict/set
-- ชื่อที่ต้องรู้: `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L62: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`, `'notice'`
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `(` เปิดกลุ่มนิพจน์/argument/tuple; `*` คูณ/ทำซ้ำข้อความ/ขยาย argument ตามตำแหน่ง; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `}` ปิด dict/set
+- ชื่อที่ต้องรู้: `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `models` = module คลาสและฟังก์ชันกลาง; `STORAGE_NOTICE` = ข้อความสถานะพื้นที่เก็บข้อมูลที่ initializer คืน ว่างเมื่อใช้พื้นที่โครงการหรือพื้นที่ที่กำหนดเอง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 ---
@@ -9182,7 +9806,7 @@ def build():
 
 ## templates/home.html — HTML/Jinja ของหน้าแรก
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 17 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 17 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `7f0f5c8caedfe79704fcdcafb3fe1066a3c978d9a2f93e929452751bba0edb97`
 
@@ -9445,7 +10069,7 @@ def build():
 
 ## templates/page1.html — HTML/Jinja ของ Overview
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 82 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 82 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `62df0224f14886762ac6143ed521ce346474d917d8795ad4fea8c33fdf707a65`
 
@@ -10422,7 +11046,7 @@ def build():
 
 ## templates/page2.html — HTML/Jinja ของ Manage
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 134 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 134 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `cba2da48f428606fc70cc26285b3ae4179b1a7513c1f3d3eb4e8781249f479d5`
 
@@ -12315,7 +12939,7 @@ def build():
 
 ## templates/page3.html — HTML/Jinja ของ Plan
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 55 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 55 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `16565dde747686bc4a663447c945273e084967e32bf806027bec3034b7646755`
 
@@ -13097,7 +13721,7 @@ def build():
 
 ## templates/team.html — HTML/Jinja ของ Team
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 38 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 38 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `65c0629dd1dce44dfa6582a8dd8c70dc77c99e8107cbef10d882dc1489a0bba1`
 
@@ -13660,7 +14284,7 @@ def build():
 
 ## templates/_task_card.html — Macro ฟอร์มและการ์ดร่วม
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 60 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 60 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `2c89502a22de0f2c61e5c53fe434a939fd6e3d1661564d0ed13500d6039ff92f`
 
@@ -14382,7 +15006,7 @@ def build():
 
 ## static/style.css — CSS เดิมและส่วนที่เพิ่มสำหรับโครงการ
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 359 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 359 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `f4b7b6ab83f12222136d98a7cd12e25e9e7325c25c3999dda531d488b6070084`
 
@@ -18864,7 +19488,7 @@ main :focus-visible, .site-nav a:focus-visible { outline: 3px solid var(--gold);
 
 ## static/js/forms.js — JavaScript ช่วยตรวจและใช้งานฟอร์ม
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 62 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 62 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `1e11f533d5c27e2e88eab61acb3c8b2b2dc83487e39e7ce33c2bd0a430db2bc2`
 
@@ -19552,7 +20176,7 @@ window.addEventListener("hashchange", openLinkedTask);
 
 ## static/js/reminders.js — JavaScript แจ้งเตือนและไฟล์ปฏิทิน
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 153 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 153 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `c55778563e6d78cc648e1cdb08c5323d3d5072100ea5ae670773af7d94fecc4a`
 
@@ -21174,9 +21798,9 @@ document.addEventListener("click", (event) => {
 
 ## data.json — ข้อมูลใช้งานจริง
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 114 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 124 physical lines (รวมบรรทัดว่าง)
 
-**SHA-256 ของไฟล์จริง:** `8de58894b4763ae0c8ce088b1096d6695773b861fbef8b2a019a45f27f0ee5df`
+**SHA-256 ของไฟล์จริง:** `37c0d8486cb635c457a7f93d0c2105be420c1321ce91483fd21f8b513ed33b47`
 
 **ผู้ศึกษา/บทบาท:** ข้อมูลร่วมของทุกหน้า
 
@@ -21198,8 +21822,8 @@ document.addEventListener("click", (event) => {
 
 ### 3. จุดที่ต้องอธิบายให้ถูก
 
-- ตัวอย่างปัจจุบัน 7 งาน เหลือรวม 29 ชั่วโมง; ค่า due/stats เปลี่ยนตามวันเครื่อง
-- owner/history ว่างตามข้อมูลจริง ไม่สร้างการทำงานย้อนหลัง
+- snapshot วันที่ 1 ตุลาคมมี 7 งาน เหลือรวม 25 ชั่วโมง มีหนึ่งงานถูกทำเครื่องหมายเสร็จตามการใช้งานจริง; ค่า due/stats เปลี่ยนตามวันเครื่อง
+- history มีเหตุการณ์ complete ที่ผู้ใช้บันทึกไว้ ไม่ใช่ชั่วโมงทำงานจริง และไม่สร้างการทำงานย้อนหลังเพิ่มเติม
 - การบันทึกเขียนทั้งไฟล์ ไม่ใช่ transaction ของฐานข้อมูล
 
 ### 4. คำถามซ้อมตอบที่เกี่ยวกับไฟล์
@@ -21208,7 +21832,7 @@ document.addEventListener("click", (event) => {
 - [Q015: list กับ dict ใช้ต่างกันอย่างไรในงานนี้?](TEACHER_QUESTIONS.md#q015)
 - [Q081: data.json เก็บกี่ field?](TEACHER_QUESTIONS.md#q081)
 - [Q082: ทำไมรายละเอียดใหม่อยู่ใน details?](TEACHER_QUESTIONS.md#q082)
-- [Q098: ถ้าจะเปิดเป็นบริการหลายคนต้องพัฒนาอะไร?](TEACHER_QUESTIONS.md#q098)
+- [Q098: ทำไมบน Vercel บันทึกไม่ได้ และแก้แล้วเก็บถาวรหรือไม่?](TEACHER_QUESTIONS.md#q098)
 
 ### 7. โค้ดปัจจุบันครบทั้งไฟล์
 
@@ -21221,15 +21845,25 @@ document.addEventListener("click", (event) => {
     "course": "ฟิสิกส์",
     "due_date": "2026-09-26",
     "estimated_hours": 6,
-    "done_hours": 2,
+    "done_hours": 6,
     "priority": "normal",
     "details": {
       "owner": "",
       "started": true,
       "subtasks": [],
-      "history": [],
+      "history": [
+        {
+          "date": "2026-10-01",
+          "hours": 4,
+          "kind": "complete",
+          "note": "ปิดงานตามเวลาประมาณ ไม่ใช่ชั่วโมงทำงานจริง"
+        }
+      ],
       "created_on": "",
-      "progress_on": ""
+      "progress_on": "2026-10-01",
+      "before_complete": 2,
+      "subtasks_before_complete": [],
+      "completed_on": "2026-10-01"
     }
   },
   {
@@ -21394,11 +22028,11 @@ document.addEventListener("click", (event) => {
 #### L7
 
 ```json
-    "done_hours": 2,
+    "done_hours": 6,
 ```
 
 - key `done_hours`: ยอดชั่วโมงความคืบหน้าสะสม
-- `$[0].done_hours` = `2` (number)
+- `$[0].done_hours` = `6` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
 #### L8
@@ -21455,15 +22089,79 @@ document.addEventListener("click", (event) => {
 #### L13
 
 ```json
-      "history": [],
+      "history": [
 ```
 
 - key `history`: list ประวัติกิจกรรม/เวลา
 - เปิด array `$[0].details.history` เก็บหลายรายการเรียงลำดับ
-- ปิด array `$[0].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
 #### L14
+
+```json
+        {
+```
+
+- เปิด object `$[0].details.history[0]` เก็บ key:value
+
+#### L15
+
+```json
+          "date": "2026-10-01",
+```
+
+- key `date`: วันที่ของประวัติ
+- `$[0].details.history[0].date` = `"2026-10-01"` (string)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+#### L16
+
+```json
+          "hours": 4,
+```
+
+- key `hours`: ชั่วโมงตามชนิดรายการ
+- `$[0].details.history[0].hours` = `4` (number)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+#### L17
+
+```json
+          "kind": "complete",
+```
+
+- key `kind`: ชนิด work/adjustment/complete/reopen
+- `$[0].details.history[0].kind` = `"complete"` (string)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+#### L18
+
+```json
+          "note": "ปิดงานตามเวลาประมาณ ไม่ใช่ชั่วโมงทำงานจริง"
+```
+
+- key `note`: หมายเหตุ
+- `$[0].details.history[0].note` = `"ปิดงานตามเวลาประมาณ ไม่ใช่ชั่วโมงทำงานจริง"` (string)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+#### L19
+
+```json
+        }
+```
+
+- ปิด object `$[0].details.history[0]`
+
+#### L20
+
+```json
+      ],
+```
+
+- ปิด array `$[0].details.history` จำนวน 1 รายการ
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+#### L21
 
 ```json
       "created_on": "",
@@ -21473,17 +22171,48 @@ document.addEventListener("click", (event) => {
 - `$[0].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L15
+#### L22
 
 ```json
-      "progress_on": ""
+      "progress_on": "2026-10-01",
 ```
 
 - key `progress_on`: วันที่อัปเดตกิจกรรม; ว่างเมื่อยังไม่มีข้อมูล
-- `$[0].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
+- `$[0].details.progress_on` = `"2026-10-01"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L16
+#### L23
+
+```json
+      "before_complete": 2,
+```
+
+- key `before_complete`: ยอดก่อนกดปิดเพื่อเปิดกลับ
+- `$[0].details.before_complete` = `2` (number)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+#### L24
+
+```json
+      "subtasks_before_complete": [],
+```
+
+- key `subtasks_before_complete`: ค่าของโครงสร้างนี้
+- เปิด array `$[0].details.subtasks_before_complete` เก็บหลายรายการเรียงลำดับ
+- ปิด array `$[0].details.subtasks_before_complete` จำนวน 0 รายการ
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+#### L25
+
+```json
+      "completed_on": "2026-10-01"
+```
+
+- key `completed_on`: วันที่ปิดงาน
+- `$[0].details.completed_on` = `"2026-10-01"` (string)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+#### L26
 
 ```json
     }
@@ -21491,7 +22220,7 @@ document.addEventListener("click", (event) => {
 
 - ปิด object `$[0].details`
 
-#### L17
+#### L27
 
 ```json
   },
@@ -21500,7 +22229,7 @@ document.addEventListener("click", (event) => {
 - ปิด object `$[0]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L18
+#### L28
 
 ```json
   {
@@ -21508,7 +22237,7 @@ document.addEventListener("click", (event) => {
 
 - เปิด object `$[1]` เก็บ key:value
 
-#### L19
+#### L29
 
 ```json
     "title": "แบบฝึกหัดอนุพันธ์",
@@ -21518,7 +22247,7 @@ document.addEventListener("click", (event) => {
 - `$[1].title` = `"แบบฝึกหัดอนุพันธ์"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L20
+#### L30
 
 ```json
     "course": "คณิตศาสตร์",
@@ -21528,7 +22257,7 @@ document.addEventListener("click", (event) => {
 - `$[1].course` = `"คณิตศาสตร์"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L21
+#### L31
 
 ```json
     "due_date": "2026-09-27",
@@ -21538,7 +22267,7 @@ document.addEventListener("click", (event) => {
 - `$[1].due_date` = `"2026-09-27"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L22
+#### L32
 
 ```json
     "estimated_hours": 4,
@@ -21548,7 +22277,7 @@ document.addEventListener("click", (event) => {
 - `$[1].estimated_hours` = `4` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L23
+#### L33
 
 ```json
     "done_hours": 0,
@@ -21558,7 +22287,7 @@ document.addEventListener("click", (event) => {
 - `$[1].done_hours` = `0` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L24
+#### L34
 
 ```json
     "priority": "normal",
@@ -21568,7 +22297,7 @@ document.addEventListener("click", (event) => {
 - `$[1].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L25
+#### L35
 
 ```json
     "details": {
@@ -21578,7 +22307,7 @@ document.addEventListener("click", (event) => {
 - เปิด object `$[1].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L26
+#### L36
 
 ```json
       "owner": "",
@@ -21588,7 +22317,7 @@ document.addEventListener("click", (event) => {
 - `$[1].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L27
+#### L37
 
 ```json
       "started": false,
@@ -21598,7 +22327,7 @@ document.addEventListener("click", (event) => {
 - `$[1].details.started` = `false` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L28
+#### L38
 
 ```json
       "subtasks": [],
@@ -21609,7 +22338,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[1].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L29
+#### L39
 
 ```json
       "history": [],
@@ -21620,7 +22349,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[1].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L30
+#### L40
 
 ```json
       "created_on": "",
@@ -21630,7 +22359,7 @@ document.addEventListener("click", (event) => {
 - `$[1].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L31
+#### L41
 
 ```json
       "progress_on": ""
@@ -21640,7 +22369,7 @@ document.addEventListener("click", (event) => {
 - `$[1].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L32
+#### L42
 
 ```json
     }
@@ -21648,7 +22377,7 @@ document.addEventListener("click", (event) => {
 
 - ปิด object `$[1].details`
 
-#### L33
+#### L43
 
 ```json
   },
@@ -21657,7 +22386,7 @@ document.addEventListener("click", (event) => {
 - ปิด object `$[1]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L34
+#### L44
 
 ```json
   {
@@ -21665,7 +22394,7 @@ document.addEventListener("click", (event) => {
 
 - เปิด object `$[2]` เก็บ key:value
 
-#### L35
+#### L45
 
 ```json
     "title": "สรุปผลห้องปฏิบัติการ",
@@ -21675,7 +22404,7 @@ document.addEventListener("click", (event) => {
 - `$[2].title` = `"สรุปผลห้องปฏิบัติการ"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L36
+#### L46
 
 ```json
     "course": "เคมี",
@@ -21685,7 +22414,7 @@ document.addEventListener("click", (event) => {
 - `$[2].course` = `"เคมี"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L37
+#### L47
 
 ```json
     "due_date": "2026-09-28",
@@ -21695,7 +22424,7 @@ document.addEventListener("click", (event) => {
 - `$[2].due_date` = `"2026-09-28"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L38
+#### L48
 
 ```json
     "estimated_hours": 5,
@@ -21705,7 +22434,7 @@ document.addEventListener("click", (event) => {
 - `$[2].estimated_hours` = `5` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L39
+#### L49
 
 ```json
     "done_hours": 1,
@@ -21715,7 +22444,7 @@ document.addEventListener("click", (event) => {
 - `$[2].done_hours` = `1` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L40
+#### L50
 
 ```json
     "priority": "normal",
@@ -21725,7 +22454,7 @@ document.addEventListener("click", (event) => {
 - `$[2].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L41
+#### L51
 
 ```json
     "details": {
@@ -21735,7 +22464,7 @@ document.addEventListener("click", (event) => {
 - เปิด object `$[2].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L42
+#### L52
 
 ```json
       "owner": "",
@@ -21745,7 +22474,7 @@ document.addEventListener("click", (event) => {
 - `$[2].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L43
+#### L53
 
 ```json
       "started": true,
@@ -21755,7 +22484,7 @@ document.addEventListener("click", (event) => {
 - `$[2].details.started` = `true` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L44
+#### L54
 
 ```json
       "subtasks": [],
@@ -21766,7 +22495,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[2].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L45
+#### L55
 
 ```json
       "history": [],
@@ -21777,7 +22506,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[2].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L46
+#### L56
 
 ```json
       "created_on": "",
@@ -21787,7 +22516,7 @@ document.addEventListener("click", (event) => {
 - `$[2].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L47
+#### L57
 
 ```json
       "progress_on": ""
@@ -21797,7 +22526,7 @@ document.addEventListener("click", (event) => {
 - `$[2].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L48
+#### L58
 
 ```json
     }
@@ -21805,7 +22534,7 @@ document.addEventListener("click", (event) => {
 
 - ปิด object `$[2].details`
 
-#### L49
+#### L59
 
 ```json
   },
@@ -21814,7 +22543,7 @@ document.addEventListener("click", (event) => {
 - ปิด object `$[2]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L50
+#### L60
 
 ```json
   {
@@ -21822,7 +22551,7 @@ document.addEventListener("click", (event) => {
 
 - เปิด object `$[3]` เก็บ key:value
 
-#### L51
+#### L61
 
 ```json
     "title": "นำเสนอหัวข้อภาษาอังกฤษ",
@@ -21832,7 +22561,7 @@ document.addEventListener("click", (event) => {
 - `$[3].title` = `"นำเสนอหัวข้อภาษาอังกฤษ"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L52
+#### L62
 
 ```json
     "course": "ภาษาอังกฤษ",
@@ -21842,7 +22571,7 @@ document.addEventListener("click", (event) => {
 - `$[3].course` = `"ภาษาอังกฤษ"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L53
+#### L63
 
 ```json
     "due_date": "2026-10-01",
@@ -21852,7 +22581,7 @@ document.addEventListener("click", (event) => {
 - `$[3].due_date` = `"2026-10-01"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L54
+#### L64
 
 ```json
     "estimated_hours": 6,
@@ -21862,7 +22591,7 @@ document.addEventListener("click", (event) => {
 - `$[3].estimated_hours` = `6` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L55
+#### L65
 
 ```json
     "done_hours": 0,
@@ -21872,7 +22601,7 @@ document.addEventListener("click", (event) => {
 - `$[3].done_hours` = `0` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L56
+#### L66
 
 ```json
     "priority": "normal",
@@ -21882,7 +22611,7 @@ document.addEventListener("click", (event) => {
 - `$[3].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L57
+#### L67
 
 ```json
     "details": {
@@ -21892,7 +22621,7 @@ document.addEventListener("click", (event) => {
 - เปิด object `$[3].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L58
+#### L68
 
 ```json
       "owner": "",
@@ -21902,7 +22631,7 @@ document.addEventListener("click", (event) => {
 - `$[3].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L59
+#### L69
 
 ```json
       "started": false,
@@ -21912,7 +22641,7 @@ document.addEventListener("click", (event) => {
 - `$[3].details.started` = `false` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L60
+#### L70
 
 ```json
       "subtasks": [],
@@ -21923,7 +22652,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[3].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L61
+#### L71
 
 ```json
       "history": [],
@@ -21934,7 +22663,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[3].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L62
+#### L72
 
 ```json
       "created_on": "",
@@ -21944,7 +22673,7 @@ document.addEventListener("click", (event) => {
 - `$[3].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L63
+#### L73
 
 ```json
       "progress_on": ""
@@ -21954,7 +22683,7 @@ document.addEventListener("click", (event) => {
 - `$[3].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L64
+#### L74
 
 ```json
     }
@@ -21962,7 +22691,7 @@ document.addEventListener("click", (event) => {
 
 - ปิด object `$[3].details`
 
-#### L65
+#### L75
 
 ```json
   },
@@ -21971,7 +22700,7 @@ document.addEventListener("click", (event) => {
 - ปิด object `$[3]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L66
+#### L76
 
 ```json
   {
@@ -21979,7 +22708,7 @@ document.addEventListener("click", (event) => {
 
 - เปิด object `$[4]` เก็บ key:value
 
-#### L67
+#### L77
 
 ```json
     "title": "โครงงานเขียนโปรแกรม",
@@ -21989,7 +22718,7 @@ document.addEventListener("click", (event) => {
 - `$[4].title` = `"โครงงานเขียนโปรแกรม"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L68
+#### L78
 
 ```json
     "course": "การเขียนโปรแกรม",
@@ -21999,7 +22728,7 @@ document.addEventListener("click", (event) => {
 - `$[4].course` = `"การเขียนโปรแกรม"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L69
+#### L79
 
 ```json
     "due_date": "2026-10-04",
@@ -22009,7 +22738,7 @@ document.addEventListener("click", (event) => {
 - `$[4].due_date` = `"2026-10-04"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L70
+#### L80
 
 ```json
     "estimated_hours": 8,
@@ -22019,7 +22748,7 @@ document.addEventListener("click", (event) => {
 - `$[4].estimated_hours` = `8` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L71
+#### L81
 
 ```json
     "done_hours": 2,
@@ -22029,7 +22758,7 @@ document.addEventListener("click", (event) => {
 - `$[4].done_hours` = `2` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L72
+#### L82
 
 ```json
     "priority": "normal",
@@ -22039,7 +22768,7 @@ document.addEventListener("click", (event) => {
 - `$[4].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L73
+#### L83
 
 ```json
     "details": {
@@ -22049,7 +22778,7 @@ document.addEventListener("click", (event) => {
 - เปิด object `$[4].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L74
+#### L84
 
 ```json
       "owner": "",
@@ -22059,7 +22788,7 @@ document.addEventListener("click", (event) => {
 - `$[4].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L75
+#### L85
 
 ```json
       "started": true,
@@ -22069,7 +22798,7 @@ document.addEventListener("click", (event) => {
 - `$[4].details.started` = `true` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L76
+#### L86
 
 ```json
       "subtasks": [],
@@ -22080,7 +22809,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[4].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L77
+#### L87
 
 ```json
       "history": [],
@@ -22091,7 +22820,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[4].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L78
+#### L88
 
 ```json
       "created_on": "",
@@ -22101,7 +22830,7 @@ document.addEventListener("click", (event) => {
 - `$[4].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L79
+#### L89
 
 ```json
       "progress_on": ""
@@ -22111,7 +22840,7 @@ document.addEventListener("click", (event) => {
 - `$[4].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L80
+#### L90
 
 ```json
     }
@@ -22119,7 +22848,7 @@ document.addEventListener("click", (event) => {
 
 - ปิด object `$[4].details`
 
-#### L81
+#### L91
 
 ```json
   },
@@ -22128,7 +22857,7 @@ document.addEventListener("click", (event) => {
 - ปิด object `$[4]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L82
+#### L92
 
 ```json
   {
@@ -22136,7 +22865,7 @@ document.addEventListener("click", (event) => {
 
 - เปิด object `$[5]` เก็บ key:value
 
-#### L83
+#### L93
 
 ```json
     "title": "โปสเตอร์แนวคิดผลิตภัณฑ์",
@@ -22146,7 +22875,7 @@ document.addEventListener("click", (event) => {
 - `$[5].title` = `"โปสเตอร์แนวคิดผลิตภัณฑ์"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L84
+#### L94
 
 ```json
     "course": "การออกแบบ",
@@ -22156,7 +22885,7 @@ document.addEventListener("click", (event) => {
 - `$[5].course` = `"การออกแบบ"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L85
+#### L95
 
 ```json
     "due_date": "2026-10-06",
@@ -22166,7 +22895,7 @@ document.addEventListener("click", (event) => {
 - `$[5].due_date` = `"2026-10-06"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L86
+#### L96
 
 ```json
     "estimated_hours": 3,
@@ -22176,7 +22905,7 @@ document.addEventListener("click", (event) => {
 - `$[5].estimated_hours` = `3` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L87
+#### L97
 
 ```json
     "done_hours": 0,
@@ -22186,7 +22915,7 @@ document.addEventListener("click", (event) => {
 - `$[5].done_hours` = `0` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L88
+#### L98
 
 ```json
     "priority": "normal",
@@ -22196,7 +22925,7 @@ document.addEventListener("click", (event) => {
 - `$[5].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L89
+#### L99
 
 ```json
     "details": {
@@ -22206,7 +22935,7 @@ document.addEventListener("click", (event) => {
 - เปิด object `$[5].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L90
+#### L100
 
 ```json
       "owner": "",
@@ -22216,7 +22945,7 @@ document.addEventListener("click", (event) => {
 - `$[5].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L91
+#### L101
 
 ```json
       "started": false,
@@ -22226,7 +22955,7 @@ document.addEventListener("click", (event) => {
 - `$[5].details.started` = `false` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L92
+#### L102
 
 ```json
       "subtasks": [],
@@ -22237,7 +22966,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[5].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L93
+#### L103
 
 ```json
       "history": [],
@@ -22248,7 +22977,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[5].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L94
+#### L104
 
 ```json
       "created_on": "",
@@ -22258,7 +22987,7 @@ document.addEventListener("click", (event) => {
 - `$[5].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L95
+#### L105
 
 ```json
       "progress_on": ""
@@ -22268,7 +22997,7 @@ document.addEventListener("click", (event) => {
 - `$[5].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L96
+#### L106
 
 ```json
     }
@@ -22276,7 +23005,7 @@ document.addEventListener("click", (event) => {
 
 - ปิด object `$[5].details`
 
-#### L97
+#### L107
 
 ```json
   },
@@ -22285,7 +23014,7 @@ document.addEventListener("click", (event) => {
 - ปิด object `$[5]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L98
+#### L108
 
 ```json
   {
@@ -22293,7 +23022,7 @@ document.addEventListener("click", (event) => {
 
 - เปิด object `$[6]` เก็บ key:value
 
-#### L99
+#### L109
 
 ```json
     "title": "ทบทวนก่อนสอบย่อย",
@@ -22303,7 +23032,7 @@ document.addEventListener("click", (event) => {
 - `$[6].title` = `"ทบทวนก่อนสอบย่อย"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L100
+#### L110
 
 ```json
     "course": "คณิตศาสตร์",
@@ -22313,7 +23042,7 @@ document.addEventListener("click", (event) => {
 - `$[6].course` = `"คณิตศาสตร์"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L101
+#### L111
 
 ```json
     "due_date": "2026-10-08",
@@ -22323,7 +23052,7 @@ document.addEventListener("click", (event) => {
 - `$[6].due_date` = `"2026-10-08"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L102
+#### L112
 
 ```json
     "estimated_hours": 2,
@@ -22333,7 +23062,7 @@ document.addEventListener("click", (event) => {
 - `$[6].estimated_hours` = `2` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L103
+#### L113
 
 ```json
     "done_hours": 0,
@@ -22343,7 +23072,7 @@ document.addEventListener("click", (event) => {
 - `$[6].done_hours` = `0` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L104
+#### L114
 
 ```json
     "priority": "normal",
@@ -22353,7 +23082,7 @@ document.addEventListener("click", (event) => {
 - `$[6].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L105
+#### L115
 
 ```json
     "details": {
@@ -22363,7 +23092,7 @@ document.addEventListener("click", (event) => {
 - เปิด object `$[6].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L106
+#### L116
 
 ```json
       "owner": "",
@@ -22373,7 +23102,7 @@ document.addEventListener("click", (event) => {
 - `$[6].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L107
+#### L117
 
 ```json
       "started": false,
@@ -22383,7 +23112,7 @@ document.addEventListener("click", (event) => {
 - `$[6].details.started` = `false` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L108
+#### L118
 
 ```json
       "subtasks": [],
@@ -22394,7 +23123,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[6].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L109
+#### L119
 
 ```json
       "history": [],
@@ -22405,7 +23134,7 @@ document.addEventListener("click", (event) => {
 - ปิด array `$[6].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L110
+#### L120
 
 ```json
       "created_on": "",
@@ -22415,7 +23144,7 @@ document.addEventListener("click", (event) => {
 - `$[6].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L111
+#### L121
 
 ```json
       "progress_on": ""
@@ -22425,7 +23154,7 @@ document.addEventListener("click", (event) => {
 - `$[6].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-#### L112
+#### L122
 
 ```json
     }
@@ -22433,7 +23162,7 @@ document.addEventListener("click", (event) => {
 
 - ปิด object `$[6].details`
 
-#### L113
+#### L123
 
 ```json
   }
@@ -22441,7 +23170,7 @@ document.addEventListener("click", (event) => {
 
 - ปิด object `$[6]`
 
-#### L114
+#### L124
 
 ```json
 ]
@@ -22457,7 +23186,7 @@ document.addEventListener("click", (event) => {
 
 ## data.sample.json — ข้อมูลตัวอย่างสำหรับคืนค่า
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 114 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 114 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `8de58894b4763ae0c8ce088b1096d6695773b861fbef8b2a019a45f27f0ee5df`
 
@@ -22481,7 +23210,7 @@ document.addEventListener("click", (event) => {
 
 - sample ไม่ใช่ backup อัตโนมัติของงานล่าสุด
 - ก่อน check.bat ต้องสำรอง data.json แยกไฟล์ และคืนหลังตรวจ
-- ขณะจัดเอกสารนี้ data กับ sample เท่ากัน ไม่แปลว่าจะเท่ากันหลังผู้ใช้เพิ่มงาน
+- snapshot รอบนี้ data กับ sample ต่างกันเพราะผู้ใช้ปิดงานแล้ว; sample ยังเป็นข้อมูลตั้งต้น ไม่ทับเพื่อทำเอกสาร
 
 ### 4. คำถามซ้อมตอบที่เกี่ยวกับไฟล์
 
@@ -23734,7 +24463,7 @@ document.addEventListener("click", (event) => {
 
 ## team.json — ชื่อกลุ่ม สมาชิก และหน้าที่รายวิชา
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 14 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 14 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `08a3ff548fe93720618fd6764cd75415a10d4ff04bf6300f094bbddfd9180427`
 
@@ -23965,7 +24694,7 @@ document.addEventListener("click", (event) => {
 
 ## planner_settings.json — งบเวลาว่างรายวัน
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 3 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 3 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `a0bc114d67f9ed243593f9d6d4d479cfd0c6df2e944b0eb54f52215a503f9f82`
 
@@ -24044,9 +24773,9 @@ document.addEventListener("click", (event) => {
 
 ## test_planner_features.py — ชุดทดสอบธุรกิจเพิ่มเติม
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 325 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 463 physical lines (รวมบรรทัดว่าง)
 
-**SHA-256 ของไฟล์จริง:** `a77f04500ea1ed11fa908af9641ace1a471ebcc0d242ec430966e840c36a3968`
+**SHA-256 ของไฟล์จริง:** `b53b8dec580ebfc47f0f976276fb753d392a0145016e5b9f04a30ff4c203fef6`
 
 **ผู้ศึกษา/บทบาท:** นายธีรเดช ฤทธิ์คำรพ · QA / ส่วนร่วม
 
@@ -24071,7 +24800,7 @@ document.addEventListener("click", (event) => {
 
 - มี list comprehension/decorator ใน test helper ซึ่งไม่ใช่ไฟล์นักศึกษาที่ให้คะแนน pages/models
 - test client ไม่ใช่การทดสอบภาพเบราว์เซอร์หรือ Notification จริง
-- ผลล่าสุดใน QA_REPORT 42 รวมของอาจารย์ 4 + เพิ่ม 38 กรณี ไม่ใช่ 42 ชื่อ def
+- ผลวันที่ 1 ตุลาคมใน QA_REPORT 55 รวมของอาจารย์ 4 + เดิม 38 + พื้นที่จัดเก็บ 13 กรณี ไม่ใช่ 55 ชื่อ def
 
 ### 4. คำถามซ้อมตอบที่เกี่ยวกับไฟล์
 
@@ -24079,7 +24808,7 @@ document.addEventListener("click", (event) => {
 - [Q054: งาน 18 ชั่วโมงส่งพรุ่งนี้ ว่าง 4 ต่อวัน ขาดเท่าไร?](TEACHER_QUESTIONS.md#q054)
 - [Q056: ว่าง 2 วันนี้ทำแล้ว 1 แต่ยังเหลืองานวันนี้ 2 ผลเท่าไร?](TEACHER_QUESTIONS.md#q056)
 - [Q083: ข้อมูลเก่า 5 field ยังเปิดได้หรือไม่?](TEACHER_QUESTIONS.md#q083)
-- [Q092: pytest 42 passed ประกอบด้วยอะไร?](TEACHER_QUESTIONS.md#q092)
+- [Q092: pytest 55 passed ประกอบด้วยอะไร?](TEACHER_QUESTIONS.md#q092)
 - [Q093: ทดสอบอย่างไรไม่ให้ข้อมูลจริงหาย?](TEACHER_QUESTIONS.md#q093)
 - [Q094: ทำไม HTTP 200 อย่างเดียวไม่พอพิสูจน์ว่าหน้าใช้ได้?](TEACHER_QUESTIONS.md#q094)
 - [Q096: ป้องกัน XSS อย่างไร?](TEACHER_QUESTIONS.md#q096)
@@ -24089,31 +24818,39 @@ document.addEventListener("click", (event) => {
 
 | ชื่อ | บรรทัดจริง | หน้าที่ |
 |---|---|---|
-| `task` | L13–L19 | ประกาศฟังก์ชัน `task`: สร้าง row จำลองสำหรับ pytest โดย due_date สัมพันธ์กับวันนี้ |
-| `isolated` | L23–L31 | ประกาศฟังก์ชัน `isolated`: pytest fixture เปลี่ยน path data/sample/settings ไป tmp_path ผ่าน monkeypatch แล้วคืน Flask test client |
-| `fields` | L34–L35 | ประกาศฟังก์ชัน `fields`: สร้าง form action/no/version จาก row ที่กำหนดสำหรับทดสอบฟอร์ม |
-| `add_form` | L38–L44 | ประกาศฟังก์ชัน `add_form`: สร้างค่าฟอร์มเพิ่มงานที่ถูกต้องแล้ว update ด้วย changes เพื่อทดลองค่าผิดเป็นรายกรณี |
-| `test_existing_five_fields_still_load_without_rewriting` | L47–L57 | ประกาศฟังก์ชัน `test_existing_five_fields_still_load_without_rewriting`: ตรวจทุกหน้าอ่านข้อมูล 5 field ได้ และ GET ไม่ rewrite รายการ |
-| `test_add_owner_priority_and_subtasks_keeps_seven_fields` | L60–L70 | ประกาศฟังก์ชัน `test_add_owner_priority_and_subtasks_keeps_seven_fields`: ตรวจ POST add พร้อม owner/high/งานย่อย มี 7 field และไม่มี work ปลอม |
-| `test_invalid_add_does_not_mutate_data` | L81–L86 | ประกาศฟังก์ชัน `test_invalid_add_does_not_mutate_data`: ใช้ parameter ค่าผิด 15 แบบ ตรวจข้อความผิดและข้อมูลเดิมอยู่ครบ |
-| `test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated` | L89–L100 | ประกาศฟังก์ชัน `test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated`: ตรวจเพิ่มวันอดีตต้องยืนยัน แต่ update วันที่อดีตเดิมแก้ชื่อได้ |
-| `test_start_complete_reopen_updates_all_pages_and_preserves_real_hours` | L103–L123 | ประกาศฟังก์ชัน `test_start_complete_reopen_updates_all_pages_and_preserves_real_hours`: ตรวจ start→complete→reopen งานย่อยคืนค่า สถิติเปลี่ยน และ complete ไม่เพิ่ม actual_total |
-| `test_work_logs_accumulate_real_hours_and_subtasks_are_independent` | L126–L146 | ประกาศฟังก์ชัน `test_work_logs_accumulate_real_hours_and_subtasks_are_independent`: ตรวจ work 1.5+2.5=4, progress 37%, ติ๊กงานย่อยไม่เปลี่ยนชั่วโมง และครบงาน |
-| `test_overlogging_and_future_work_date_are_rejected` | L149–L157 | ประกาศฟังก์ชัน `test_overlogging_and_future_work_date_are_rejected`: ปฏิเสธบันทึกเกิน remaining และ work_date อนาคตโดยยอดเดิมไม่เปลี่ยน |
-| `test_stale_row_cannot_modify_a_shifted_or_updated_task` | L160–L172 | ประกาศฟังก์ชัน `test_stale_row_cannot_modify_a_shifted_or_updated_task`: ตรวจ form เก่าหลังลบ row ก่อนหน้าหรือเปลี่ยนชื่อไม่ไปแก้งานใหม่ |
-| `test_bad_indices_do_not_crash_or_save` | L176–L182 | ประกาศฟังก์ชัน `test_bad_indices_do_not_crash_or_save`: ตรวจ unicode digit, ติดลบ, ว่าง, และเลขยาวไม่ทำให้พัง/บันทึก |
-| `test_plan_uses_daily_capacity_and_groups_identical_deadlines` | L185–L195 | ประกาศฟังก์ชัน `test_plan_uses_daily_capacity_and_groups_identical_deadlines`: เทียบส่วนขาดที่งบ 2/4 และงานวันเดียวกันมี cumulative/gap เท่ากัน |
-| `test_plan_example_nine_required_four_available_and_five_short` | L198–L206 | ประกาศฟังก์ชัน `test_plan_example_nine_required_four_available_and_five_short`: ตรวจตัวอย่าง 18 ชั่วโมง/2 วัน ต้อง 9 มี 4 ขาด 5 ต่อวันและ 10 รวม |
-| `test_overdue_included_and_tiny_shortfall_never_looks_on_track` | L209–L217 | ประกาศฟังก์ชัน `test_overdue_included_and_tiny_shortfall_never_looks_on_track`: ตรวจงานค้างรวมในภาระอนาคต และส่วนขาด 0.01 ยังขึ้นเสี่ยง |
-| `test_daily_hours_saved_and_used_across_pages` | L220–L227 | ประกาศฟังก์ชัน `test_daily_hours_saved_and_used_across_pages`: ตรวจบันทึก settings ใช้ร่วมทุกหน้า และค่าผิดไม่เปลี่ยนค่าที่บันทึก |
-| `test_recommendations_never_overbook_today_and_use_priority_tiebreak` | L230–L237 | ประกาศฟังก์ชัน `test_recommendations_never_overbook_today_and_use_priority_tiebreak`: ตรวจค้างก่อน ใกล้ก่อน รวม today_hours ไม่เกินงบ และ high ชนะเมื่อเกณฑ์อื่นเท่ากัน |
-| `test_team_counts_progress_and_unassigned_tasks` | L240–L250 | ประกาศฟังก์ชัน `test_team_counts_progress_and_unassigned_tasks`: ตรวจ owner/count/progress/unassigned และเกณฑ์ overloaded |
-| `test_empty_and_completed_only_data_have_no_focus` | L253–L258 | ประกาศฟังก์ชัน `test_empty_and_completed_only_data_have_no_focus`: ตรวจข้อมูลว่าง/เสร็จหมดไม่มี focus และแผนไม่มี pending |
-| `test_all_forms_have_versions_and_templates_escape_user_input` | L261–L272 | ประกาศฟังก์ชัน `test_all_forms_have_versions_and_templates_escape_user_input`: ตรวจไม่มีหน้าข้อผิดพลาด ชื่อ script escape hidden version และ POST ปิดได้ |
-| `test_today_work_reduces_recommendation_budget_and_capacity` | L275–L292 | ประกาศฟังก์ชัน `test_today_work_reduces_recommendation_budget_and_capacity`: ตรวจ work วันนี้จากงานเสร็จลดทั้งงบคำแนะนำและความจุ และเมื่อครบไม่มีจัดสรรเพิ่ม |
-| `test_past_logs_and_estimated_completion_do_not_consume_today` | L295–L305 | ประกาศฟังก์ชัน `test_past_logs_and_estimated_completion_do_not_consume_today`: ตรวจ work วันก่อนกับ complete วันนี้ไม่ลดงบวันนี้ และ summary นับจริงวันเดิม |
-| `test_reopen_requires_prior_manual_completion` | L308–L312 | ประกาศฟังก์ชัน `test_reopen_requires_prior_manual_completion`: ตรวจ reopen ของงานค้างหรือเสร็จจากชั่วโมงโดยไม่มี snapshot ถูกปฏิเสธ |
-| `test_daily_summary_groups_actual_work_only` | L315–L325 | ประกาศฟังก์ชัน `test_daily_summary_groups_actual_work_only`: ตรวจ work 1+1.5 วันเดียวรวม 2.5/2 ครั้ง โดย complete 8 ไม่รวม |
+| `task` | L15–L21 | ประกาศฟังก์ชัน `task`: สร้าง row จำลองสำหรับ pytest โดย due_date สัมพันธ์กับวันนี้ |
+| `isolated` | L25–L33 | ประกาศฟังก์ชัน `isolated`: pytest fixture เปลี่ยน path data/sample/settings ไป tmp_path ผ่าน monkeypatch แล้วคืน Flask test client |
+| `fields` | L36–L37 | ประกาศฟังก์ชัน `fields`: สร้าง form action/no/version จาก row ที่กำหนดสำหรับทดสอบฟอร์ม |
+| `add_form` | L40–L46 | ประกาศฟังก์ชัน `add_form`: สร้างค่าฟอร์มเพิ่มงานที่ถูกต้องแล้ว update ด้วย changes เพื่อทดลองค่าผิดเป็นรายกรณี |
+| `test_existing_five_fields_still_load_without_rewriting` | L49–L59 | ประกาศฟังก์ชัน `test_existing_five_fields_still_load_without_rewriting`: ตรวจทุกหน้าอ่านข้อมูล 5 field ได้ และ GET ไม่ rewrite รายการ |
+| `test_add_owner_priority_and_subtasks_keeps_seven_fields` | L62–L72 | ประกาศฟังก์ชัน `test_add_owner_priority_and_subtasks_keeps_seven_fields`: ตรวจ POST add พร้อม owner/high/งานย่อย มี 7 field และไม่มี work ปลอม |
+| `test_invalid_add_does_not_mutate_data` | L83–L88 | ประกาศฟังก์ชัน `test_invalid_add_does_not_mutate_data`: ใช้ parameter ค่าผิด 15 แบบ ตรวจข้อความผิดและข้อมูลเดิมอยู่ครบ |
+| `test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated` | L91–L102 | ประกาศฟังก์ชัน `test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated`: ตรวจเพิ่มวันอดีตต้องยืนยัน แต่ update วันที่อดีตเดิมแก้ชื่อได้ |
+| `test_start_complete_reopen_updates_all_pages_and_preserves_real_hours` | L105–L125 | ประกาศฟังก์ชัน `test_start_complete_reopen_updates_all_pages_and_preserves_real_hours`: ตรวจ start→complete→reopen งานย่อยคืนค่า สถิติเปลี่ยน และ complete ไม่เพิ่ม actual_total |
+| `test_work_logs_accumulate_real_hours_and_subtasks_are_independent` | L128–L148 | ประกาศฟังก์ชัน `test_work_logs_accumulate_real_hours_and_subtasks_are_independent`: ตรวจ work 1.5+2.5=4, progress 37%, ติ๊กงานย่อยไม่เปลี่ยนชั่วโมง และครบงาน |
+| `test_overlogging_and_future_work_date_are_rejected` | L151–L159 | ประกาศฟังก์ชัน `test_overlogging_and_future_work_date_are_rejected`: ปฏิเสธบันทึกเกิน remaining และ work_date อนาคตโดยยอดเดิมไม่เปลี่ยน |
+| `test_stale_row_cannot_modify_a_shifted_or_updated_task` | L162–L174 | ประกาศฟังก์ชัน `test_stale_row_cannot_modify_a_shifted_or_updated_task`: ตรวจ form เก่าหลังลบ row ก่อนหน้าหรือเปลี่ยนชื่อไม่ไปแก้งานใหม่ |
+| `test_bad_indices_do_not_crash_or_save` | L178–L184 | ประกาศฟังก์ชัน `test_bad_indices_do_not_crash_or_save`: ตรวจ unicode digit, ติดลบ, ว่าง, และเลขยาวไม่ทำให้พัง/บันทึก |
+| `test_plan_uses_daily_capacity_and_groups_identical_deadlines` | L187–L197 | ประกาศฟังก์ชัน `test_plan_uses_daily_capacity_and_groups_identical_deadlines`: เทียบส่วนขาดที่งบ 2/4 และงานวันเดียวกันมี cumulative/gap เท่ากัน |
+| `test_plan_example_nine_required_four_available_and_five_short` | L200–L208 | ประกาศฟังก์ชัน `test_plan_example_nine_required_four_available_and_five_short`: ตรวจตัวอย่าง 18 ชั่วโมง/2 วัน ต้อง 9 มี 4 ขาด 5 ต่อวันและ 10 รวม |
+| `test_overdue_included_and_tiny_shortfall_never_looks_on_track` | L211–L219 | ประกาศฟังก์ชัน `test_overdue_included_and_tiny_shortfall_never_looks_on_track`: ตรวจงานค้างรวมในภาระอนาคต และส่วนขาด 0.01 ยังขึ้นเสี่ยง |
+| `test_daily_hours_saved_and_used_across_pages` | L222–L229 | ประกาศฟังก์ชัน `test_daily_hours_saved_and_used_across_pages`: ตรวจบันทึก settings ใช้ร่วมทุกหน้า และค่าผิดไม่เปลี่ยนค่าที่บันทึก |
+| `test_recommendations_never_overbook_today_and_use_priority_tiebreak` | L232–L239 | ประกาศฟังก์ชัน `test_recommendations_never_overbook_today_and_use_priority_tiebreak`: ตรวจค้างก่อน ใกล้ก่อน รวม today_hours ไม่เกินงบ และ high ชนะเมื่อเกณฑ์อื่นเท่ากัน |
+| `test_team_counts_progress_and_unassigned_tasks` | L242–L252 | ประกาศฟังก์ชัน `test_team_counts_progress_and_unassigned_tasks`: ตรวจ owner/count/progress/unassigned และเกณฑ์ overloaded |
+| `test_empty_and_completed_only_data_have_no_focus` | L255–L260 | ประกาศฟังก์ชัน `test_empty_and_completed_only_data_have_no_focus`: ตรวจข้อมูลว่าง/เสร็จหมดไม่มี focus และแผนไม่มี pending |
+| `test_all_forms_have_versions_and_templates_escape_user_input` | L263–L274 | ประกาศฟังก์ชัน `test_all_forms_have_versions_and_templates_escape_user_input`: ตรวจไม่มีหน้าข้อผิดพลาด ชื่อ script escape hidden version และ POST ปิดได้ |
+| `test_today_work_reduces_recommendation_budget_and_capacity` | L277–L294 | ประกาศฟังก์ชัน `test_today_work_reduces_recommendation_budget_and_capacity`: ตรวจ work วันนี้จากงานเสร็จลดทั้งงบคำแนะนำและความจุ และเมื่อครบไม่มีจัดสรรเพิ่ม |
+| `test_past_logs_and_estimated_completion_do_not_consume_today` | L297–L307 | ประกาศฟังก์ชัน `test_past_logs_and_estimated_completion_do_not_consume_today`: ตรวจ work วันก่อนกับ complete วันนี้ไม่ลดงบวันนี้ และ summary นับจริงวันเดิม |
+| `test_reopen_requires_prior_manual_completion` | L310–L314 | ประกาศฟังก์ชัน `test_reopen_requires_prior_manual_completion`: ตรวจ reopen ของงานค้างหรือเสร็จจากชั่วโมงโดยไม่มี snapshot ถูกปฏิเสธ |
+| `test_daily_summary_groups_actual_work_only` | L317–L327 | ประกาศฟังก์ชัน `test_daily_summary_groups_actual_work_only`: ตรวจ work 1+1.5 วันเดียวรวม 2.5/2 ครั้ง โดย complete 8 ไม่รวม |
+| `read_only_runtime` | L331–L355 | ประกาศฟังก์ชัน `read_only_runtime`: fixture จำลอง EROFS เฉพาะโฟลเดอร์ bundle และแยกพื้นที่เขียนได้ไป tmp_path ใช้กับ Flask test client |
+| `deny_bundle` | L348–L351 | ประกาศฟังก์ชัน `deny_bundle`: ตัวจำลองปฏิเสธ TemporaryFile ใน bundle ด้วย errno.EROFS ส่วนตำแหน่งอื่นส่งต่อฟังก์ชันจริง |
+| `test_read_only_runtime_supports_all_task_actions` | L360–L399 | ประกาศฟังก์ชัน `test_read_only_runtime_supports_all_task_actions`: ขยาย 8 action ทดสอบ POST หน้า 2 บนพื้นที่อ่านอย่างเดียว ตรวจข้อมูลปลายทางและต้นทางไม่ถูกเปลี่ยน |
+| `test_read_only_runtime_add_settings_and_reinitialization` | L402–L419 | ประกาศฟังก์ชัน `test_read_only_runtime_add_settings_and_reinitialization`: ทดสอบเพิ่มงาน บันทึก settings และ initializer ไม่ทับข้อมูลเดิม พร้อม notice ทุกหน้าและข้อความ invalid hours |
+| `test_writable_local_storage_stays_in_project` | L422–L433 | ประกาศฟังก์ชัน `test_writable_local_storage_stays_in_project`: ตรวจ localhost ที่เขียนได้ไม่ย้าย DATA_FILE/settings และยังบันทึกงานกับชั่วโมงได้ |
+| `test_configured_data_directory_preserves_existing_files` | L436–L450 | ประกาศฟังก์ชัน `test_configured_data_directory_preserves_existing_files`: ตรวจปลายทางจาก environment ไม่ทับข้อมูล/settings เดิม และ reset ใช้ SAMPLE_FILE ที่ fixture กำหนด |
+| `test_storage_initialization_does_not_hide_other_io_errors` | L454–L463 | ประกาศฟังก์ชัน `test_storage_initialization_does_not_hide_other_io_errors`: ขยาย ENOSPC/EIO และตรวจว่า initializer ส่งต่อ error แทนการซ่อนด้วย fallback |
+| `fail` | L457–L458 | ประกาศฟังก์ชัน `fail`: ฟังก์ชันจำลองการเขียนไม่ได้ด้วยรหัส error ที่กรณีทดสอบกำหนด |
 
 ### 6. ชื่อและคำศัพท์ที่พบใน Python
 
@@ -24121,24 +24858,45 @@ document.addEventListener("click", (event) => {
 
 | ชื่อ | ความหมาย |
 |---|---|
+| `DATA_FILE` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `EIO` | อุปกรณ์อ่านเขียนขัดข้อง ไม่เลือก fallback เพื่อปิดบัง error |
+| `ENOSPC` | พื้นที่เก็บข้อมูลเต็ม ไม่เลือก fallback เพื่อปิดบัง error |
+| `EROFS` | พื้นที่ไฟล์อ่านอย่างเดียว |
+| `OSError` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `SETTINGS_FILE` | path ของ planner_settings.json |
+| `TemporaryFile` | เปิดไฟล์ชั่วคราวและลบอัตโนมัติเมื่อปิด ใช้ทดสอบสิทธิ์เขียนของโฟลเดอร์ |
+| `abspath` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `action` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `actual` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `add_form` | สร้างค่าฟอร์มเพิ่มงานที่ถูกต้องแล้ว update ด้วย changes เพื่อทดลองค่าผิดเป็นรายกรณี |
 | `all` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `app` | module Flask router ที่อาจารย์ให้ |
+| `args` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `as_text` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `before` | ข้อมูลก่อนการกระทำเพื่อเทียบใน test |
 | `build` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `bundle` | โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน |
 | `changes` | ค่า override สำหรับสร้างข้อมูลทดลอง |
+| `client` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `code` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `commonpath` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `configure_storage` | ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models |
 | `data` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `data_file` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `date` | ชนิดวันที่ระดับวันจาก datetime |
 | `datetime` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `days` | จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท |
+| `delenv` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `deny_bundle` | ตัวจำลองปฏิเสธ TemporaryFile ใน bundle ด้วย errno.EROFS ส่วนตำแหน่งอื่นส่งต่อฟังก์ชันจริง |
+| `destination` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `done` | ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น |
 | `due_date` | วันส่งมาตรฐาน YYYY-MM-DD |
+| `dumps` | แปลง object เป็นข้อความ JSON |
 | `encoding` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `errno` | module ค่ารหัสข้อผิดพลาดของระบบปฏิบัติการ |
+| `error` | ข้อความข้อผิดพลาดจาก check |
 | `estimate` | ชั่วโมงประมาณของงาน |
+| `fail` | ฟังก์ชันจำลองการเขียนไม่ได้ด้วยรหัส error ที่กรณีทดสอบกำหนด |
 | `fields` | สร้าง form action/no/version จาก row ที่กำหนดสำหรับทดสอบฟอร์ม |
 | `first` | รายการที่มี key น้อยที่สุดในรอบเลือก |
 | `fixture` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
@@ -24154,15 +24912,21 @@ document.addEventListener("click", (event) => {
 | `isoformat` | แปลง date เป็น YYYY-MM-DD |
 | `isolated` | Flask test client ที่ใช้ storage/settings ชั่วคราว |
 | `json` | standard library serialize/parse JSON |
+| `kwargs` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `len` | จำนวนสมาชิก/อักขระ |
 | `load` | อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก |
+| `load_daily_hours` | อ่าน settings และตรวจค่า; หากไฟล์/โครงสร้าง/ค่าผิด ใช้ 2 |
+| `loads` | แปลงข้อความ JSON กลับเป็น object |
 | `mark` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `member` | สมาชิกหนึ่งคน |
 | `message` | ข้อความคืนให้ app แสดง banner |
+| `mkdir` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `models` | module คลาสและฟังก์ชันกลาง |
 | `monkeypatch` | pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test |
 | `note` | หมายเหตุของประวัติ |
 | `number` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `original_tempfile` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `os` | standard library จัดการ path |
 | `overview` | รวมข้อมูลทุกงาน แผน การจัดสรรวันนี้ และสถิติเป็น context เดียวให้ทุกหน้าใช้ |
 | `owner` | string รหัสสมาชิกที่รับงาน หรือว่าง |
 | `page1` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
@@ -24176,14 +24940,22 @@ document.addEventListener("click", (event) => {
 | `post` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `priority` | ระดับ high/normal/low |
 | `pytest` | เครื่องมือทดสอบที่ environment โครงการมีอยู่ |
+| `raises` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `raising` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `read_only_runtime` | fixture จำลอง EROFS เฉพาะโฟลเดอร์ bundle และแยกพื้นที่เขียนได้ไป tmp_path ใช้กับ Flask test client |
+| `read_text` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `reset` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `response` | ผล HTTP จาก test client หรือ fetch ตามภาษา |
 | `result` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `row` | dict ข้อมูลงานหนึ่งรายการ |
 | `sample_file` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `save` | เขียนทั้งรายการงานผ่าน storage |
 | `saved` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `scratch` | พื้นที่ชั่วคราวเขียนได้ของการทดสอบ |
 | `second` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `setattr` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `setenv` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `settings_file` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `stale_form` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `startswith` | ตรวจว่าข้อความขึ้นต้นตามที่กำหนด |
 | `status_code` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
@@ -24196,10 +24968,12 @@ document.addEventListener("click", (event) => {
 | `task` | Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน |
 | `team` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
 | `team_data` | อ่าน TEAM_FILE JSON เป็น dict; ฟังก์ชันนี้ไม่มี fallback เมื่อไฟล์เสีย |
+| `tempfile` | standard library สร้างพื้นที่ชั่วคราว |
 | `test_add_owner_priority_and_subtasks_keeps_seven_fields` | ตรวจ POST add พร้อม owner/high/งานย่อย มี 7 field และไม่มี work ปลอม |
 | `test_all_forms_have_versions_and_templates_escape_user_input` | ตรวจไม่มีหน้าข้อผิดพลาด ชื่อ script escape hidden version และ POST ปิดได้ |
 | `test_bad_indices_do_not_crash_or_save` | ตรวจ unicode digit, ติดลบ, ว่าง, และเลขยาวไม่ทำให้พัง/บันทึก |
 | `test_client` | ชื่อที่ประกาศ/นำเข้า/เข้าถึงใน source; ตรวจตำแหน่งนิยามและ argument ในโค้ดด้านล่าง |
+| `test_configured_data_directory_preserves_existing_files` | ตรวจปลายทางจาก environment ไม่ทับข้อมูล/settings เดิม และ reset ใช้ SAMPLE_FILE ที่ fixture กำหนด |
 | `test_daily_hours_saved_and_used_across_pages` | ตรวจบันทึก settings ใช้ร่วมทุกหน้า และค่าผิดไม่เปลี่ยนค่าที่บันทึก |
 | `test_daily_summary_groups_actual_work_only` | ตรวจ work 1+1.5 วันเดียวรวม 2.5/2 ครั้ง โดย complete 8 ไม่รวม |
 | `test_empty_and_completed_only_data_have_no_focus` | ตรวจข้อมูลว่าง/เสร็จหมดไม่มี focus และแผนไม่มี pending |
@@ -24211,13 +24985,17 @@ document.addEventListener("click", (event) => {
 | `test_past_logs_and_estimated_completion_do_not_consume_today` | ตรวจ work วันก่อนกับ complete วันนี้ไม่ลดงบวันนี้ และ summary นับจริงวันเดิม |
 | `test_plan_example_nine_required_four_available_and_five_short` | ตรวจตัวอย่าง 18 ชั่วโมง/2 วัน ต้อง 9 มี 4 ขาด 5 ต่อวันและ 10 รวม |
 | `test_plan_uses_daily_capacity_and_groups_identical_deadlines` | เทียบส่วนขาดที่งบ 2/4 และงานวันเดียวกันมี cumulative/gap เท่ากัน |
+| `test_read_only_runtime_add_settings_and_reinitialization` | ทดสอบเพิ่มงาน บันทึก settings และ initializer ไม่ทับข้อมูลเดิม พร้อม notice ทุกหน้าและข้อความ invalid hours |
+| `test_read_only_runtime_supports_all_task_actions` | ขยาย 8 action ทดสอบ POST หน้า 2 บนพื้นที่อ่านอย่างเดียว ตรวจข้อมูลปลายทางและต้นทางไม่ถูกเปลี่ยน |
 | `test_recommendations_never_overbook_today_and_use_priority_tiebreak` | ตรวจค้างก่อน ใกล้ก่อน รวม today_hours ไม่เกินงบ และ high ชนะเมื่อเกณฑ์อื่นเท่ากัน |
 | `test_reopen_requires_prior_manual_completion` | ตรวจ reopen ของงานค้างหรือเสร็จจากชั่วโมงโดยไม่มี snapshot ถูกปฏิเสธ |
 | `test_stale_row_cannot_modify_a_shifted_or_updated_task` | ตรวจ form เก่าหลังลบ row ก่อนหน้าหรือเปลี่ยนชื่อไม่ไปแก้งานใหม่ |
 | `test_start_complete_reopen_updates_all_pages_and_preserves_real_hours` | ตรวจ start→complete→reopen งานย่อยคืนค่า สถิติเปลี่ยน และ complete ไม่เพิ่ม actual_total |
+| `test_storage_initialization_does_not_hide_other_io_errors` | ขยาย ENOSPC/EIO และตรวจว่า initializer ส่งต่อ error แทนการซ่อนด้วย fallback |
 | `test_team_counts_progress_and_unassigned_tasks` | ตรวจ owner/count/progress/unassigned และเกณฑ์ overloaded |
 | `test_today_work_reduces_recommendation_budget_and_capacity` | ตรวจ work วันนี้จากงานเสร็จลดทั้งงบคำแนะนำและความจุ และเมื่อครบไม่มีจัดสรรเพิ่ม |
 | `test_work_logs_accumulate_real_hours_and_subtasks_are_independent` | ตรวจ work 1.5+2.5=4, progress 37%, ติ๊กงานย่อยไม่เปลี่ยนชั่วโมง และครบงาน |
+| `test_writable_local_storage_stays_in_project` | ตรวจ localhost ที่เขียนได้ไม่ย้าย DATA_FILE/settings และยังบันทึกงานกับชั่วโมงได้ |
 | `timedelta` | ส่วนต่างเวลาที่ใช้สร้างวันที่ทดลอง |
 | `title` | ชื่องาน/ชื่อหัวข้อขึ้นกับ dict |
 | `tmp_path` | พื้นที่ชั่วคราวของ pytest |
@@ -24236,7 +25014,9 @@ document.addEventListener("click", (event) => {
 ```python
 """Business tests for the upgraded planner; all mutations use temporary files."""
 from datetime import date, timedelta
+import errno
 import json
+import os
 
 import pytest
 
@@ -24559,6 +25339,142 @@ def test_daily_summary_groups_actual_work_only(isolated):
     summary = page2.build()
     assert summary["daily_history"] == [{"date": today, "hours": 2.5, "count": 2}]
     assert summary["actual_total"] == 2.5
+
+
+@pytest.fixture
+def read_only_runtime(tmp_path, monkeypatch, isolated):
+    """Simulate a read-only deployment without changing the project files."""
+    bundle = tmp_path / "bundle"
+    scratch = tmp_path / "scratch"
+    bundle.mkdir()
+    scratch.mkdir()
+    row = task()
+    row["details"]["subtasks"] = [{"title": "ทดสอบ", "done": False}]
+    (bundle / "data.json").write_text(json.dumps([row]), encoding="utf-8")
+    (bundle / "planner_settings.json").write_text('{"daily_hours": 2}', encoding="utf-8")
+    monkeypatch.setattr(models, "HERE", str(bundle))
+    monkeypatch.setattr(storage, "DATA_FILE", str(bundle / "data.json"))
+    monkeypatch.setattr(models, "SETTINGS_FILE", str(bundle / "planner_settings.json"))
+    monkeypatch.delenv("DEADLINE_DATA_DIR", raising=False)
+    monkeypatch.setattr(models.tempfile, "gettempdir", lambda: str(scratch))
+    original_tempfile = models.tempfile.TemporaryFile
+
+    def deny_bundle(*args, **kwargs):
+        if os.path.abspath(kwargs.get("dir", "")) == str(bundle):
+            raise OSError(errno.EROFS, "Read-only file system")
+        return original_tempfile(*args, **kwargs)
+
+    monkeypatch.setattr(models.tempfile, "TemporaryFile", deny_bundle)
+    monkeypatch.setattr(models, "STORAGE_NOTICE", models.configure_storage())
+    return isolated, bundle, scratch
+
+
+@pytest.mark.parametrize("action", ["start", "complete", "reopen", "update", "delete",
+                                         "log_time", "add_subtask", "toggle_subtask"])
+def test_read_only_runtime_supports_all_task_actions(read_only_runtime, action):
+    client, bundle, scratch = read_only_runtime
+    if action == "reopen":
+        row = storage.load()[0]
+        assert page2.handle(fields(row, action="complete")).startswith("✓")
+    row = storage.load()[0]
+    form = fields(row, action=action)
+    if action == "update":
+        form.update(add_form(title="งานที่แก้ไข"))
+        form["action"] = action
+    elif action == "log_time":
+        form.update(hours="1", work_date=date.today().isoformat())
+    elif action == "add_subtask":
+        form["subtask_title"] = "เตรียมส่ง"
+    elif action == "toggle_subtask":
+        form["subtask_no"] = "0"
+    response = client.post("/page2", data=form, follow_redirects=True)
+    html = response.get_data(as_text=True)
+    assert "ยังไม่พร้อม" not in html
+    assert "✓" in html
+    assert "ข้อมูลเก็บชั่วคราว" in html
+    assert os.path.commonpath([storage.DATA_FILE, str(scratch)]) == str(scratch)
+    saved = storage.load()
+    if action == "start":
+        assert saved[0]["details"]["started"]
+    elif action == "complete":
+        assert saved[0]["done_hours"] == saved[0]["estimated_hours"]
+    elif action == "reopen":
+        assert saved[0]["done_hours"] == 0
+    elif action == "update":
+        assert saved[0]["title"] == "งานที่แก้ไข"
+    elif action == "delete":
+        assert saved == []
+    elif action == "log_time":
+        assert saved[0]["done_hours"] == 1
+    elif action == "add_subtask":
+        assert len(saved[0]["details"]["subtasks"]) == 2
+    else:
+        assert saved[0]["details"]["subtasks"][0]["done"]
+    assert json.loads((bundle / "data.json").read_text(encoding="utf-8"))[0]["done_hours"] == 0
+
+
+def test_read_only_runtime_add_settings_and_reinitialization(read_only_runtime):
+    client, bundle, scratch = read_only_runtime
+    response = client.post("/page2", data=add_form(), follow_redirects=True)
+    assert "เพิ่มงานแล้ว" in response.get_data(as_text=True)
+    assert len(storage.load()) == 2
+    response = client.post("/page3", data={"action": "save_hours", "hours": "4"}, follow_redirects=True)
+    assert "บันทึกเวลาว่างแล้ว" in response.get_data(as_text=True)
+    before = storage.load()
+    models.configure_storage()
+    assert storage.load() == before
+    assert models.load_daily_hours() == 4
+    for path in ("/page1", "/page2", "/page3", "/team", "/page3?hours=invalid"):
+        html = client.get(path).get_data(as_text=True)
+        assert "ยังไม่พร้อม" not in html
+        assert "ข้อมูลเก็บชั่วคราว" in html
+    html = client.get("/page3?hours=invalid").get_data(as_text=True)
+    assert "กรุณากรอกเวลาว่าง" in html
+    assert json.loads((bundle / "planner_settings.json").read_text(encoding="utf-8"))["daily_hours"] == 2
+
+
+def test_writable_local_storage_stays_in_project(isolated, tmp_path, monkeypatch):
+    monkeypatch.delenv("DEADLINE_DATA_DIR", raising=False)
+    monkeypatch.setattr(models, "HERE", str(tmp_path))
+    data_file = storage.DATA_FILE
+    settings_file = models.SETTINGS_FILE
+    assert models.configure_storage() == ""
+    assert storage.DATA_FILE == data_file
+    assert models.SETTINGS_FILE == settings_file
+    assert page2.handle(add_form()).startswith("✓")
+    assert len(storage.load()) == 1
+    assert page3.handle({"action": "save_hours", "hours": "4"}).startswith("✓")
+    assert models.load_daily_hours() == 4
+
+
+def test_configured_data_directory_preserves_existing_files(isolated, tmp_path, monkeypatch):
+    destination = tmp_path / "persistent"
+    destination.mkdir()
+    row = task("งานเดิมในพื้นที่จัดเก็บ")
+    (destination / "data.json").write_text(json.dumps([row]), encoding="utf-8")
+    (destination / "planner_settings.json").write_text('{"daily_hours": 3}', encoding="utf-8")
+    monkeypatch.setenv("DEADLINE_DATA_DIR", str(destination))
+    assert models.configure_storage() == ""
+    assert storage.load() == [row]
+    assert models.load_daily_hours() == 3
+    assert page2.handle(add_form()).startswith("✓")
+    models.configure_storage()
+    assert len(storage.load()) == 2
+    assert storage.reset()
+    assert storage.load() == []
+
+
+@pytest.mark.parametrize("code", [errno.ENOSPC, errno.EIO])
+def test_storage_initialization_does_not_hide_other_io_errors(isolated, monkeypatch, code):
+    monkeypatch.delenv("DEADLINE_DATA_DIR", raising=False)
+
+    def fail(*args, **kwargs):
+        raise OSError(code, "Cannot write")
+
+    monkeypatch.setattr(models.tempfile, "TemporaryFile", fail)
+    with pytest.raises(OSError) as error:
+        models.configure_storage()
+    assert error.value.errno == code
 ```
 
 ### 8. คำอธิบายทุกบรรทัด
@@ -24586,26 +25502,29 @@ from datetime import date, timedelta
 #### L3
 
 ```python
+import errno
+```
+
+- นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import errno`
+- ชื่อที่ต้องรู้: `errno` = module ค่ารหัสข้อผิดพลาดของระบบปฏิบัติการ
+
+#### L4
+
+```python
 import json
 ```
 
 - นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import json`
 - ชื่อที่ต้องรู้: `json` = standard library serialize/parse JSON
 
-#### L4
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L5
 
 ```python
-import pytest
+import os
 ```
 
-- นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import pytest`
-- ชื่อที่ต้องรู้: `pytest` = เครื่องมือทดสอบที่ environment โครงการมีอยู่
+- นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import os`
+- ชื่อที่ต้องรู้: `os` = standard library จัดการ path
 
 #### L6
 
@@ -24616,13 +25535,28 @@ import pytest
 #### L7
 
 ```python
+import pytest
+```
+
+- นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import pytest`
+- ชื่อที่ต้องรู้: `pytest` = เครื่องมือทดสอบที่ environment โครงการมีอยู่
+
+#### L8
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L9
+
+```python
 import app
 ```
 
 - นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import app`
 - ชื่อที่ต้องรู้: `app` = module Flask router ที่อาจารย์ให้
 
-#### L8
+#### L10
 
 ```python
 import models
@@ -24631,7 +25565,7 @@ import models
 - นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import models`
 - ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง
 
-#### L9
+#### L11
 
 ```python
 import storage
@@ -24640,7 +25574,7 @@ import storage
 - นำเข้าชื่อ/module ที่ใช้ในไฟล์: `import storage`
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้
 
-#### L10
+#### L12
 
 ```python
 from pages import page1, page2, page3, team
@@ -24649,19 +25583,19 @@ from pages import page1, page2, page3, team
 - นำเข้าชื่อ/module ที่ใช้ในไฟล์: `from pages import page1, page2, page3, team`
 - เครื่องหมาย: `,` คั่นสมาชิก/argument
 
-#### L11
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L12
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L13
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L14
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L15
 
 ```python
 def task(title="งาน A", days=1, estimate=4, done=0, priority="normal", owner=""):
@@ -24671,7 +25605,7 @@ def task(title="งาน A", days=1, estimate=4, done=0, priority="normal", own
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `title` = ชื่องาน/ชื่อหัวข้อขึ้นกับ dict; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `estimate` = ชั่วโมงประมาณของงาน; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น; `priority` = ระดับ high/normal/low; `owner` = string รหัสสมาชิกที่รับงาน หรือว่าง
 
-#### L14
+#### L16
 
 ```python
     return {"title": title, "course": "การเขียนโปรแกรม",
@@ -24682,73 +25616,73 @@ def task(title="งาน A", days=1, estimate=4, done=0, priority="normal", own
 - ชื่อที่ต้องรู้: `title` = ชื่องาน/ชื่อหัวข้อขึ้นกับ dict
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L15
+#### L17
 
 ```python
             "due_date": (date.today() + timedelta(days=days)).isoformat(),
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L14: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L16: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `(` เปิดกลุ่มนิพจน์/argument/tuple; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `)` ปิดกลุ่มที่เปิดด้วย (; `+` บวกเลข/ต่อข้อความตามชนิด; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `timedelta` = ส่วนต่างเวลาที่ใช้สร้างวันที่ทดลอง; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `isoformat` = แปลง date เป็น YYYY-MM-DD
-- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L16
-
-```python
-            "estimated_hours": estimate, "done_hours": done, "priority": priority,
-```
-
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L14: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
-- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
-- ชื่อที่ต้องรู้: `estimate` = ชั่วโมงประมาณของงาน; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น; `priority` = ระดับ high/normal/low
-- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L17
-
-```python
-            "details": {"owner": owner, "started": done > 0, "subtasks": [],
-```
-
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L14: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
-- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `{` เปิด dict/set ตามบริบท; `,` คั่นสมาชิก/argument; `>` มากกว่า; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
-- ชื่อที่ต้องรู้: `owner` = string รหัสสมาชิกที่รับงาน หรือว่าง; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L18
 
 ```python
+            "estimated_hours": estimate, "done_hours": done, "priority": priority,
+```
+
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L16: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
+- ชื่อที่ต้องรู้: `estimate` = ชั่วโมงประมาณของงาน; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น; `priority` = ระดับ high/normal/low
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L19
+
+```python
+            "details": {"owner": owner, "started": done > 0, "subtasks": [],
+```
+
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L16: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `{` เปิด dict/set ตามบริบท; `,` คั่นสมาชิก/argument; `>` มากกว่า; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ชื่อที่ต้องรู้: `owner` = string รหัสสมาชิกที่รับงาน หรือว่าง; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L20
+
+```python
                         "history": [], "created_on": date.today().isoformat(),
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L14: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L16: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `,` คั่นสมาชิก/argument; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 24 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L19
+#### L21
 
 ```python
                         "progress_on": ""}}
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L14: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L16: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'details'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set
 - ย่อหน้า 24 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L20
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L21
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L22
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L23
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L24
 
 ```python
 @pytest.fixture
@@ -24758,7 +25692,7 @@ def task(title="งาน A", days=1, estimate=4, done=0, priority="normal", own
 - เครื่องหมาย: `@` เริ่ม decorator ในชุดทดสอบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย
 - ชื่อที่ต้องรู้: `pytest` = เครื่องมือทดสอบที่ environment โครงการมีอยู่
 
-#### L23
+#### L25
 
 ```python
 def isolated(tmp_path, monkeypatch):
@@ -24768,7 +25702,7 @@ def isolated(tmp_path, monkeypatch):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `tmp_path` = พื้นที่ชั่วคราวของ pytest; `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test
 
-#### L24
+#### L26
 
 ```python
     data_file = tmp_path / "data.json"
@@ -24779,7 +25713,7 @@ def isolated(tmp_path, monkeypatch):
 - ชื่อที่ต้องรู้: `tmp_path` = พื้นที่ชั่วคราวของ pytest
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L25
+#### L27
 
 ```python
     sample_file = tmp_path / "data.sample.json"
@@ -24790,7 +25724,7 @@ def isolated(tmp_path, monkeypatch):
 - ชื่อที่ต้องรู้: `tmp_path` = พื้นที่ชั่วคราวของ pytest
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L26
+#### L28
 
 ```python
     data_file.write_text("[]", encoding="utf-8")
@@ -24800,7 +25734,7 @@ def isolated(tmp_path, monkeypatch):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L27
+#### L29
 
 ```python
     sample_file.write_text("[]", encoding="utf-8")
@@ -24810,7 +25744,7 @@ def isolated(tmp_path, monkeypatch):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L28
+#### L30
 
 ```python
     monkeypatch.setattr(storage, "DATA_FILE", str(data_file))
@@ -24821,7 +25755,7 @@ def isolated(tmp_path, monkeypatch):
 - ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `str` = แปลงเป็นข้อความ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L29
+#### L31
 
 ```python
     monkeypatch.setattr(storage, "SAMPLE_FILE", str(sample_file))
@@ -24832,7 +25766,7 @@ def isolated(tmp_path, monkeypatch):
 - ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `str` = แปลงเป็นข้อความ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L30
+#### L32
 
 ```python
     monkeypatch.setattr(models, "SETTINGS_FILE", str(tmp_path / "settings.json"))
@@ -24843,7 +25777,7 @@ def isolated(tmp_path, monkeypatch):
 - ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `models` = module คลาสและฟังก์ชันกลาง; `str` = แปลงเป็นข้อความ; `tmp_path` = พื้นที่ชั่วคราวของ pytest
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L31
+#### L33
 
 ```python
     return app.app.test_client()
@@ -24854,19 +25788,19 @@ def isolated(tmp_path, monkeypatch):
 - ชื่อที่ต้องรู้: `app` = module Flask router ที่อาจารย์ให้
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L32
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L33
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L34
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L35
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L36
 
 ```python
 def fields(row, index=0, action="complete"):
@@ -24876,7 +25810,7 @@ def fields(row, index=0, action="complete"):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `index` = ตำแหน่งที่ผ่านตรวจขอบเขต
 
-#### L35
+#### L37
 
 ```python
     return {"action": action, "no": str(index), "version": models.version_of(row)}
@@ -24887,19 +25821,19 @@ def fields(row, index=0, action="complete"):
 - ชื่อที่ต้องรู้: `str` = แปลงเป็นข้อความ; `index` = ตำแหน่งที่ผ่านตรวจขอบเขต; `models` = module คลาสและฟังก์ชันกลาง; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L36
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L37
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L38
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L39
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L40
 
 ```python
 def add_form(**changes):
@@ -24909,7 +25843,7 @@ def add_form(**changes):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `**` ขยาย keyword arguments หรือยกกำลังตามบริบท; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `changes` = ค่า override สำหรับสร้างข้อมูลทดลอง
 
-#### L39
+#### L41
 
 ```python
     form = {"action": "add", "title": "งานใหม่", "course": "ฟิสิกส์",
@@ -24920,38 +25854,38 @@ def add_form(**changes):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L40
+#### L42
 
 ```python
             "due_date": (date.today() + timedelta(days=2)).isoformat(),
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L39: เก็บผล dict ที่มี key `'action'`, `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'owner'` ลง `form`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L41: เก็บผล dict ที่มี key `'action'`, `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'owner'` ลง `form`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `(` เปิดกลุ่มนิพจน์/argument/tuple; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `)` ปิดกลุ่มที่เปิดด้วย (; `+` บวกเลข/ต่อข้อความตามชนิด; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `timedelta` = ส่วนต่างเวลาที่ใช้สร้างวันที่ทดลอง; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L41
+#### L43
 
 ```python
             "estimated_hours": "4", "done_hours": "0", "priority": "normal",
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L39: เก็บผล dict ที่มี key `'action'`, `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'owner'` ลง `form`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L41: เก็บผล dict ที่มี key `'action'`, `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'owner'` ลง `form`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L42
+#### L44
 
 ```python
             "owner": ""}
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L39: เก็บผล dict ที่มี key `'action'`, `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'owner'` ลง `form`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L41: เก็บผล dict ที่มี key `'action'`, `'title'`, `'course'`, `'due_date'`, `'estimated_hours'`, `'done_hours'`, `'priority'`, `'owner'` ลง `form`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L43
+#### L45
 
 ```python
     form.update(changes)
@@ -24962,7 +25896,7 @@ def add_form(**changes):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `changes` = ค่า override สำหรับสร้างข้อมูลทดลอง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L44
+#### L46
 
 ```python
     return form
@@ -24972,19 +25906,19 @@ def add_form(**changes):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L45
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L46
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L47
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L48
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L49
 
 ```python
 def test_existing_five_fields_still_load_without_rewriting(isolated):
@@ -24994,7 +25928,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L48
+#### L50
 
 ```python
     row = task()
@@ -25005,7 +25939,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L49
+#### L51
 
 ```python
     del row["priority"]
@@ -25016,7 +25950,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L50
+#### L52
 
 ```python
     del row["details"]
@@ -25027,7 +25961,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L51
+#### L53
 
 ```python
     storage.save([row])
@@ -25038,7 +25972,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L52
+#### L54
 
 ```python
     before = storage.load()
@@ -25049,7 +25983,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - ชื่อที่ต้องรู้: `before` = ข้อมูลก่อนการกระทำเพื่อเทียบใน test; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L53
+#### L55
 
 ```python
     for path in ("/", "/page1", "/page2", "/page3", "/team"):
@@ -25059,7 +25993,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L54
+#### L56
 
 ```python
         response = isolated.get(path)
@@ -25070,7 +26004,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L55
+#### L57
 
 ```python
         assert response.status_code == 200
@@ -25081,7 +26015,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L56
+#### L58
 
 ```python
         assert "ยังไม่พร้อม" not in response.get_data(as_text=True)
@@ -25092,7 +26026,7 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `True` = boolean จริง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L57
+#### L59
 
 ```python
     assert storage.load() == before
@@ -25103,19 +26037,19 @@ def test_existing_five_fields_still_load_without_rewriting(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก; `before` = ข้อมูลก่อนการกระทำเพื่อเทียบใน test
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L58
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L59
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L60
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L61
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L62
 
 ```python
 def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
@@ -25125,7 +26059,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L61
+#### L63
 
 ```python
     owner = models.team_data()["members"][0]["id"]
@@ -25136,7 +26070,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `owner` = string รหัสสมาชิกที่รับงาน หรือว่าง; `models` = module คลาสและฟังก์ชันกลาง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L62
+#### L64
 
 ```python
     form = add_form(owner=owner, priority="high", subtasks="วิเคราะห์\nออกแบบ\nทดสอบ")
@@ -25147,7 +26081,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `owner` = string รหัสสมาชิกที่รับงาน หรือว่าง; `priority` = ระดับ high/normal/low; `subtasks` = list ขั้นตอนย่อย
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L63
+#### L65
 
 ```python
     response = isolated.post("/page2", data=form, follow_redirects=True)
@@ -25158,7 +26092,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `form` = dict ของข้อมูลฟอร์ม POST; `True` = boolean จริง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L64
+#### L66
 
 ```python
     assert "เพิ่มงานแล้ว" in response.get_data(as_text=True)
@@ -25169,7 +26103,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `True` = boolean จริง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L65
+#### L67
 
 ```python
     row = storage.load()[0]
@@ -25180,7 +26114,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L66
+#### L68
 
 ```python
     assert len(row) == 7
@@ -25191,7 +26125,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `len` = จำนวนสมาชิก/อักขระ; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L67
+#### L69
 
 ```python
     assert row["details"]["owner"] == owner
@@ -25202,7 +26136,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `owner` = string รหัสสมาชิกที่รับงาน หรือว่าง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L68
+#### L70
 
 ```python
     assert row["priority"] == "high"
@@ -25213,7 +26147,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L69
+#### L71
 
 ```python
     assert len(row["details"]["subtasks"]) == 3
@@ -25224,7 +26158,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `len` = จำนวนสมาชิก/อักขระ; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L70
+#### L72
 
 ```python
     assert not row["details"]["history"]
@@ -25235,19 +26169,19 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L71
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L72
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L73
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L74
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L75
 
 ```python
 @pytest.mark.parametrize("changes", [
@@ -25257,7 +26191,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - เครื่องหมาย: `@` เริ่ม decorator ในชุดทดสอบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key
 - ชื่อที่ต้องรู้: `pytest` = เครื่องมือทดสอบที่ environment โครงการมีอยู่
 
-#### L74
+#### L76
 
 ```python
     {"title": "   "}, {"course": ""}, {"title": "ก" * 81}, {"course": "ก" * 41},
@@ -25267,7 +26201,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `,` คั่นสมาชิก/argument; `*` คูณ/ทำซ้ำข้อความ/ขยาย argument ตามตำแหน่ง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L75
+#### L77
 
 ```python
     {"due_date": "2026-02-30"}, {"due_date": "20260930"},
@@ -25277,7 +26211,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `,` คั่นสมาชิก/argument
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L76
+#### L78
 
 ```python
     {"estimated_hours": "0"}, {"estimated_hours": "-1"},
@@ -25287,7 +26221,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `,` คั่นสมาชิก/argument
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L77
+#### L79
 
 ```python
     {"estimated_hours": "200.1"}, {"estimated_hours": "nan"},
@@ -25297,7 +26231,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `,` คั่นสมาชิก/argument
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L78
+#### L80
 
 ```python
     {"estimated_hours": "inf"}, {"done_hours": "-1"}, {"done_hours": "5"},
@@ -25307,7 +26241,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `,` คั่นสมาชิก/argument
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L79
+#### L81
 
 ```python
     {"priority": "unknown"}, {"owner": "999999"},
@@ -25317,7 +26251,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `,` คั่นสมาชิก/argument
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L80
+#### L82
 
 ```python
 ])
@@ -25326,7 +26260,7 @@ def test_add_owner_priority_and_subtasks_keeps_seven_fields(isolated):
 - ส่วนของนิพจน์/รายการ argument ที่เปิดจากบรรทัดก่อนหน้า อ่านต่อรวมเป็นคำสั่งเดียว
 - เครื่องหมาย: `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
 
-#### L81
+#### L83
 
 ```python
 def test_invalid_add_does_not_mutate_data(isolated, changes):
@@ -25336,7 +26270,7 @@ def test_invalid_add_does_not_mutate_data(isolated, changes):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `changes` = ค่า override สำหรับสร้างข้อมูลทดลอง
 
-#### L82
+#### L84
 
 ```python
     storage.save([task()])
@@ -25347,7 +26281,7 @@ def test_invalid_add_does_not_mutate_data(isolated, changes):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L83
+#### L85
 
 ```python
     before = storage.load()
@@ -25358,7 +26292,7 @@ def test_invalid_add_does_not_mutate_data(isolated, changes):
 - ชื่อที่ต้องรู้: `before` = ข้อมูลก่อนการกระทำเพื่อเทียบใน test; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L84
+#### L86
 
 ```python
     message = page2.handle(add_form(**changes))
@@ -25369,7 +26303,7 @@ def test_invalid_add_does_not_mutate_data(isolated, changes):
 - ชื่อที่ต้องรู้: `message` = ข้อความคืนให้ app แสดง banner; `changes` = ค่า override สำหรับสร้างข้อมูลทดลอง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L85
+#### L87
 
 ```python
     assert message.startswith("✗")
@@ -25380,7 +26314,7 @@ def test_invalid_add_does_not_mutate_data(isolated, changes):
 - ชื่อที่ต้องรู้: `message` = ข้อความคืนให้ app แสดง banner; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L86
+#### L88
 
 ```python
     assert storage.load() == before
@@ -25391,19 +26325,19 @@ def test_invalid_add_does_not_mutate_data(isolated, changes):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก; `before` = ข้อมูลก่อนการกระทำเพื่อเทียบใน test
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L87
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L88
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L89
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L90
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L91
 
 ```python
 def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isolated):
@@ -25413,7 +26347,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L90
+#### L92
 
 ```python
     form = add_form(due_date=(date.today() - timedelta(days=1)).isoformat())
@@ -25424,7 +26358,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `due_date` = วันส่งมาตรฐาน YYYY-MM-DD; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `timedelta` = ส่วนต่างเวลาที่ใช้สร้างวันที่ทดลอง; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L91
+#### L93
 
 ```python
     assert page2.handle(form).startswith("✗")
@@ -25435,7 +26369,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L92
+#### L94
 
 ```python
     assert storage.load() == []
@@ -25446,7 +26380,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L93
+#### L95
 
 ```python
     form["acknowledge_past"] = "yes"
@@ -25457,7 +26391,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L94
+#### L96
 
 ```python
     assert page2.handle(form).startswith("✓")
@@ -25468,7 +26402,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L95
+#### L97
 
 ```python
     row = storage.load()[0]
@@ -25479,7 +26413,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L96
+#### L98
 
 ```python
     form.update(fields(row, action="update"))
@@ -25490,7 +26424,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L97
+#### L99
 
 ```python
     del form["acknowledge_past"]
@@ -25501,7 +26435,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L98
+#### L100
 
 ```python
     form["title"] = "อัปเดตงานค้าง"
@@ -25512,7 +26446,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L99
+#### L101
 
 ```python
     assert page2.handle(form).startswith("✓")
@@ -25523,7 +26457,7 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L100
+#### L102
 
 ```python
     assert storage.load()[0]["title"] == "อัปเดตงานค้าง"
@@ -25534,19 +26468,19 @@ def test_past_deadline_requires_confirmation_but_old_overdue_can_be_updated(isol
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L101
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L102
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L103
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L104
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L105
 
 ```python
 def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolated):
@@ -25556,7 +26490,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L104
+#### L106
 
 ```python
     row = task(done=1)
@@ -25567,7 +26501,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L105
+#### L107
 
 ```python
     row["details"]["subtasks"] = [{"title": "ออกแบบ", "done": True},
@@ -25578,18 +26512,18 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `True` = boolean จริง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L106
+#### L108
 
 ```python
                                  {"title": "ทดสอบ", "done": False}]
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L105: เก็บผล list [dict ที่มี key `'title'`, `'done'`, dict ที่มี key `'title'`, `'done'`] ลง `row['details']['subtasks']`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L107: เก็บผล list [dict ที่มี key `'title'`, `'done'`, dict ที่มี key `'title'`, `'done'`] ลง `row['details']['subtasks']`
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set; `]` ปิด list/การอ้าง index/key
 - ชื่อที่ต้องรู้: `False` = boolean เท็จ
 - ย่อหน้า 33 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L107
+#### L109
 
 ```python
     storage.save([row])
@@ -25600,7 +26534,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L108
+#### L110
 
 ```python
     assert page1.handle(fields(row, action="start")).startswith("✓")
@@ -25611,7 +26545,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L109
+#### L111
 
 ```python
     row = storage.load()[0]
@@ -25622,7 +26556,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L110
+#### L112
 
 ```python
     assert page1.handle(fields(row)).startswith("✓")
@@ -25633,7 +26567,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L111
+#### L113
 
 ```python
     saved = storage.load()[0]
@@ -25644,7 +26578,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L112
+#### L114
 
 ```python
     assert saved["done_hours"] == 4
@@ -25654,7 +26588,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L113
+#### L115
 
 ```python
     assert all(subtask["done"] for subtask in saved["details"]["subtasks"])
@@ -25664,7 +26598,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L114
+#### L116
 
 ```python
     assert page1.build()["open_count"] == 0
@@ -25674,7 +26608,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L115
+#### L117
 
 ```python
     assert page1.build()["completed_count"] == 1
@@ -25684,7 +26618,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L116
+#### L118
 
 ```python
     assert page3.build({})["risk_count"] == 0
@@ -25694,7 +26628,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L117
+#### L119
 
 ```python
     history, actual = models.work_history(page2.build()["items"])
@@ -25705,7 +26639,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `history` = ประวัติหลายรายการ; `models` = module คลาสและฟังก์ชันกลาง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L118
+#### L120
 
 ```python
     assert actual == 0
@@ -25715,7 +26649,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - เครื่องหมาย: `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L119
+#### L121
 
 ```python
     assert history[0]["kind"] == "complete"
@@ -25726,7 +26660,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `history` = ประวัติหลายรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L120
+#### L122
 
 ```python
     assert page1.handle(fields(saved, action="reopen")).startswith("✓")
@@ -25737,7 +26671,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L121
+#### L123
 
 ```python
     saved = storage.load()[0]
@@ -25748,7 +26682,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L122
+#### L124
 
 ```python
     assert saved["done_hours"] == 1
@@ -25758,7 +26692,7 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L123
+#### L125
 
 ```python
     assert [subtask["done"] for subtask in saved["details"]["subtasks"]] == [True, False]
@@ -25769,19 +26703,19 @@ def test_start_complete_reopen_updates_all_pages_and_preserves_real_hours(isolat
 - ชื่อที่ต้องรู้: `True` = boolean จริง; `False` = boolean เท็จ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L124
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L125
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L126
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L127
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L128
 
 ```python
 def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
@@ -25791,7 +26725,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L127
+#### L129
 
 ```python
     row = task()
@@ -25802,7 +26736,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L128
+#### L130
 
 ```python
     row["details"]["subtasks"] = [{"title": "ทดสอบ", "done": False}]
@@ -25813,7 +26747,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `False` = boolean เท็จ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L129
+#### L131
 
 ```python
     storage.save([row])
@@ -25824,7 +26758,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L130
+#### L132
 
 ```python
     form = fields(row, action="log_time")
@@ -25835,7 +26769,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L131
+#### L133
 
 ```python
     form.update(hours="1.5", work_date=date.today().isoformat(), note="ทำส่วนแรก")
@@ -25846,7 +26780,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD; `note` = หมายเหตุของประวัติ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L132
+#### L134
 
 ```python
     assert page2.handle(form).startswith("✓")
@@ -25857,7 +26791,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L133
+#### L135
 
 ```python
     row = storage.load()[0]
@@ -25868,7 +26802,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L134
+#### L136
 
 ```python
     assert row["done_hours"] == 1.5
@@ -25879,7 +26813,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L135
+#### L137
 
 ```python
     assert page1.build()["items"][0]["progress"] == 37
@@ -25889,7 +26823,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L136
+#### L138
 
 ```python
     form = fields(row, action="toggle_subtask")
@@ -25900,7 +26834,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L137
+#### L139
 
 ```python
     form["subtask_no"] = "0"
@@ -25911,7 +26845,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L138
+#### L140
 
 ```python
     assert page2.handle(form).startswith("✓")
@@ -25922,7 +26856,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L139
+#### L141
 
 ```python
     row = storage.load()[0]
@@ -25933,7 +26867,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L140
+#### L142
 
 ```python
     assert row["details"]["subtasks"][0]["done"]
@@ -25944,7 +26878,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L141
+#### L143
 
 ```python
     assert row["done_hours"] == 1.5
@@ -25955,7 +26889,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L142
+#### L144
 
 ```python
     form = fields(row, action="log_time")
@@ -25966,7 +26900,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L143
+#### L145
 
 ```python
     form.update(hours="2.5", work_date=date.today().isoformat())
@@ -25977,7 +26911,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L144
+#### L146
 
 ```python
     assert page2.handle(form).startswith("✓")
@@ -25988,7 +26922,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L145
+#### L147
 
 ```python
     assert page1.build()["open_count"] == 0
@@ -25998,7 +26932,7 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L146
+#### L148
 
 ```python
     assert page2.build()["actual_total"] == 4
@@ -26008,19 +26942,19 @@ def test_work_logs_accumulate_real_hours_and_subtasks_are_independent(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L147
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L148
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L149
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L150
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L151
 
 ```python
 def test_overlogging_and_future_work_date_are_rejected(isolated):
@@ -26030,7 +26964,7 @@ def test_overlogging_and_future_work_date_are_rejected(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L150
+#### L152
 
 ```python
     row = task()
@@ -26041,7 +26975,7 @@ def test_overlogging_and_future_work_date_are_rejected(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L151
+#### L153
 
 ```python
     storage.save([row])
@@ -26052,7 +26986,7 @@ def test_overlogging_and_future_work_date_are_rejected(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L152
+#### L154
 
 ```python
     form = fields(row, action="log_time")
@@ -26063,7 +26997,7 @@ def test_overlogging_and_future_work_date_are_rejected(isolated):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L153
+#### L155
 
 ```python
     form.update(hours="5", work_date=date.today().isoformat())
@@ -26072,28 +27006,6 @@ def test_overlogging_and_future_work_date_are_rejected(isolated):
 - เรียก `form.update` ด้วย argument ที่แสดงในโค้ด
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L154
-
-```python
-    assert page2.handle(form).startswith("✗")
-```
-
-- ตรวจคำตอบใน test: ต้องให้ เรียก `page2.handle(form).startswith` ด้วย argument ที่แสดงในโค้ด เป็นจริง มิฉะนั้น test ไม่ผ่าน
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
-- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L155
-
-```python
-    form.update(hours="1", work_date=(date.today() + timedelta(days=1)).isoformat())
-```
-
-- เรียก `form.update` ด้วย argument ที่แสดงในโค้ด
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `+` บวกเลข/ต่อข้อความตามชนิด
-- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `timedelta` = ส่วนต่างเวลาที่ใช้สร้างวันที่ทดลอง; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L156
@@ -26110,6 +27022,28 @@ def test_overlogging_and_future_work_date_are_rejected(isolated):
 #### L157
 
 ```python
+    form.update(hours="1", work_date=(date.today() + timedelta(days=1)).isoformat())
+```
+
+- เรียก `form.update` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `+` บวกเลข/ต่อข้อความตามชนิด
+- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `timedelta` = ส่วนต่างเวลาที่ใช้สร้างวันที่ทดลอง; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `isoformat` = แปลง date เป็น YYYY-MM-DD
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L158
+
+```python
+    assert page2.handle(form).startswith("✗")
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `page2.handle(form).startswith` ด้วย argument ที่แสดงในโค้ด เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L159
+
+```python
     assert storage.load()[0]["done_hours"] == 0
 ```
 
@@ -26118,19 +27052,19 @@ def test_overlogging_and_future_work_date_are_rejected(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L158
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L159
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L160
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L161
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L162
 
 ```python
 def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
@@ -26140,7 +27074,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L161
+#### L163
 
 ```python
     first, second = task("ก่อน"), task("หลัง")
@@ -26151,7 +27085,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `first` = รายการที่มี key น้อยที่สุดในรอบเลือก; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L162
+#### L164
 
 ```python
     storage.save([first, second])
@@ -26162,7 +27096,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `first` = รายการที่มี key น้อยที่สุดในรอบเลือก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L163
+#### L165
 
 ```python
     stale_form = fields(second, 1)
@@ -26172,7 +27106,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L164
+#### L166
 
 ```python
     assert page2.handle(fields(first, action="delete")).startswith("✓")
@@ -26183,7 +27117,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `first` = รายการที่มี key น้อยที่สุดในรอบเลือก; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L165
+#### L167
 
 ```python
     assert page1.handle(stale_form).startswith("✗")
@@ -26194,7 +27128,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L166
+#### L168
 
 ```python
     assert storage.load()[0]["title"] == "หลัง"
@@ -26205,7 +27139,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L167
+#### L169
 
 ```python
     assert storage.load()[0]["done_hours"] == 0
@@ -26216,7 +27150,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L168
+#### L170
 
 ```python
     stale_form = fields(storage.load()[0], action="complete")
@@ -26227,7 +27161,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L169
+#### L171
 
 ```python
     row = storage.load()[0]
@@ -26238,7 +27172,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L170
+#### L172
 
 ```python
     row["title"] = "ชื่อใหม่"
@@ -26249,7 +27183,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L171
+#### L173
 
 ```python
     storage.save([row])
@@ -26260,7 +27194,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L172
+#### L174
 
 ```python
     assert page1.handle(stale_form).startswith("✗")
@@ -26271,19 +27205,19 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - ชื่อที่ต้องรู้: `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L173
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L174
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L175
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L176
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L177
 
 ```python
 @pytest.mark.parametrize("number", ["²", "-1", "", "99999999999999999999"])
@@ -26293,7 +27227,7 @@ def test_stale_row_cannot_modify_a_shifted_or_updated_task(isolated):
 - เครื่องหมาย: `@` เริ่ม decorator ในชุดทดสอบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `pytest` = เครื่องมือทดสอบที่ environment โครงการมีอยู่
 
-#### L176
+#### L178
 
 ```python
 def test_bad_indices_do_not_crash_or_save(isolated, number):
@@ -26303,7 +27237,7 @@ def test_bad_indices_do_not_crash_or_save(isolated, number):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L177
+#### L179
 
 ```python
     row = task()
@@ -26314,7 +27248,7 @@ def test_bad_indices_do_not_crash_or_save(isolated, number):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L178
+#### L180
 
 ```python
     storage.save([row])
@@ -26325,7 +27259,7 @@ def test_bad_indices_do_not_crash_or_save(isolated, number):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L179
+#### L181
 
 ```python
     form = fields(row)
@@ -26336,7 +27270,7 @@ def test_bad_indices_do_not_crash_or_save(isolated, number):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L180
+#### L182
 
 ```python
     form["no"] = number
@@ -26347,7 +27281,7 @@ def test_bad_indices_do_not_crash_or_save(isolated, number):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L181
+#### L183
 
 ```python
     assert page1.handle(form).startswith("✗")
@@ -26358,7 +27292,7 @@ def test_bad_indices_do_not_crash_or_save(isolated, number):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L182
+#### L184
 
 ```python
     assert storage.load()[0]["done_hours"] == 0
@@ -26369,19 +27303,19 @@ def test_bad_indices_do_not_crash_or_save(isolated, number):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L183
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L184
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L185
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L186
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L187
 
 ```python
 def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
@@ -26391,7 +27325,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L186
+#### L188
 
 ```python
     storage.save([task("วันนี้", 0, 3), task("พรุ่งนี้", 1, 4)])
@@ -26402,7 +27336,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L187
+#### L189
 
 ```python
     plan = page3.build({"hours": "2"})
@@ -26412,7 +27346,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L188
+#### L190
 
 ```python
     assert [row["gap"] for row in plan["tasks"]] == [1, 3]
@@ -26423,7 +27357,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L189
+#### L191
 
 ```python
     assert plan["risk_count"] == 2
@@ -26433,7 +27367,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L190
+#### L192
 
 ```python
     assert page3.build({"hours": "4"})["risk_count"] == 0
@@ -26443,7 +27377,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L191
+#### L193
 
 ```python
     storage.save([task("งานแรก", 0, 3), task("งานสอง", 0, 4)])
@@ -26454,7 +27388,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L192
+#### L194
 
 ```python
     plan = page3.build({"hours": "4"})
@@ -26464,7 +27398,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L193
+#### L195
 
 ```python
     assert [row["gap"] for row in plan["tasks"]] == [3, 3]
@@ -26475,7 +27409,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L194
+#### L196
 
 ```python
     assert [row["cumulative_hours"] for row in plan["tasks"]] == [7, 7]
@@ -26486,7 +27420,7 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L195
+#### L197
 
 ```python
     assert plan["risk_count"] == 2
@@ -26496,19 +27430,19 @@ def test_plan_uses_daily_capacity_and_groups_identical_deadlines(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L196
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L197
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L198
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L199
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L200
 
 ```python
 def test_plan_example_nine_required_four_available_and_five_short(isolated):
@@ -26518,7 +27452,7 @@ def test_plan_example_nine_required_four_available_and_five_short(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L199
+#### L201
 
 ```python
     storage.save([task(estimate=18, days=1)])
@@ -26529,7 +27463,7 @@ def test_plan_example_nine_required_four_available_and_five_short(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `estimate` = ชั่วโมงประมาณของงาน; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L200
+#### L202
 
 ```python
     plan = page3.build({"hours": "4"})
@@ -26539,7 +27473,7 @@ def test_plan_example_nine_required_four_available_and_five_short(isolated):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L201
+#### L203
 
 ```python
     row = plan["tasks"][0]
@@ -26550,7 +27484,7 @@ def test_plan_example_nine_required_four_available_and_five_short(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L202
+#### L204
 
 ```python
     assert row["hours_per_day"] == 9
@@ -26561,7 +27495,7 @@ def test_plan_example_nine_required_four_available_and_five_short(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L203
+#### L205
 
 ```python
     assert row["shortfall_per_day"] == 5
@@ -26572,7 +27506,7 @@ def test_plan_example_nine_required_four_available_and_five_short(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L204
+#### L206
 
 ```python
     assert row["gap"] == 10
@@ -26583,7 +27517,7 @@ def test_plan_example_nine_required_four_available_and_five_short(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L205
+#### L207
 
 ```python
     assert plan["required_daily"] == 9
@@ -26593,7 +27527,7 @@ def test_plan_example_nine_required_four_available_and_five_short(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L206
+#### L208
 
 ```python
     assert plan["daily_shortfall"] == 5
@@ -26603,19 +27537,19 @@ def test_plan_example_nine_required_four_available_and_five_short(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L207
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L208
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L209
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L210
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L211
 
 ```python
 def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
@@ -26625,7 +27559,7 @@ def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L210
+#### L212
 
 ```python
     storage.save([task("ค้าง", -1, 2), task("อนาคต", 1, 3)])
@@ -26636,7 +27570,7 @@ def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L211
+#### L213
 
 ```python
     plan = page3.build({"hours": "2"})
@@ -26646,7 +27580,7 @@ def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L212
+#### L214
 
 ```python
     assert plan["tasks"][1]["cumulative_hours"] == 5
@@ -26656,7 +27590,7 @@ def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L213
+#### L215
 
 ```python
     assert plan["tasks"][1]["gap"] == 1
@@ -26666,7 +27600,7 @@ def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L214
+#### L216
 
 ```python
     storage.save([task(estimate=2.01, days=0)])
@@ -26677,7 +27611,7 @@ def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `estimate` = ชั่วโมงประมาณของงาน; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L215
+#### L217
 
 ```python
     row = page3.build({"hours": "2"})["tasks"][0]
@@ -26688,7 +27622,7 @@ def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L216
+#### L218
 
 ```python
     assert row["at_risk"]
@@ -26699,7 +27633,7 @@ def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L217
+#### L219
 
 ```python
     assert row["gap"] == 0.1
@@ -26710,19 +27644,19 @@ def test_overdue_included_and_tiny_shortfall_never_looks_on_track(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L218
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L219
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L220
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L221
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L222
 
 ```python
 def test_daily_hours_saved_and_used_across_pages(isolated):
@@ -26732,7 +27666,7 @@ def test_daily_hours_saved_and_used_across_pages(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L221
+#### L223
 
 ```python
     assert page3.handle({"action": "save_hours", "hours": "4"}).startswith("✓")
@@ -26743,7 +27677,7 @@ def test_daily_hours_saved_and_used_across_pages(isolated):
 - ชื่อที่ต้องรู้: `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L222
+#### L224
 
 ```python
     assert page1.build()["daily_hours"] == 4
@@ -26753,7 +27687,7 @@ def test_daily_hours_saved_and_used_across_pages(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L223
+#### L225
 
 ```python
     assert page3.build({})["daily_hours"] == 4
@@ -26763,7 +27697,7 @@ def test_daily_hours_saved_and_used_across_pages(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L224
+#### L226
 
 ```python
     assert team.build()["daily_hours"] == 4
@@ -26773,7 +27707,7 @@ def test_daily_hours_saved_and_used_across_pages(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L225
+#### L227
 
 ```python
     for value in ("0", "12.1", "abc", "nan", "inf"):
@@ -26784,7 +27718,7 @@ def test_daily_hours_saved_and_used_across_pages(isolated):
 - ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L226
+#### L228
 
 ```python
         assert page3.handle({"action": "save_hours", "hours": value}).startswith("✗")
@@ -26795,7 +27729,7 @@ def test_daily_hours_saved_and_used_across_pages(isolated):
 - ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L227
+#### L229
 
 ```python
         assert page3.build({"hours": value})["daily_hours"] == 4
@@ -26806,19 +27740,19 @@ def test_daily_hours_saved_and_used_across_pages(isolated):
 - ชื่อที่ต้องรู้: `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L228
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L229
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L230
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L231
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L232
 
 ```python
 def test_recommendations_never_overbook_today_and_use_priority_tiebreak(isolated):
@@ -26828,7 +27762,7 @@ def test_recommendations_never_overbook_today_and_use_priority_tiebreak(isolated
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L231
+#### L233
 
 ```python
     storage.save([task("ไกล", 7, 10), task("ใกล้", 1, 1), task("ค้าง", -1, 1)])
@@ -26839,7 +27773,7 @@ def test_recommendations_never_overbook_today_and_use_priority_tiebreak(isolated
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L232
+#### L234
 
 ```python
     overview = page1.build()
@@ -26849,7 +27783,7 @@ def test_recommendations_never_overbook_today_and_use_priority_tiebreak(isolated
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L233
+#### L235
 
 ```python
     assert overview["focus"]["title"] == "ค้าง"
@@ -26859,7 +27793,7 @@ def test_recommendations_never_overbook_today_and_use_priority_tiebreak(isolated
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L234
+#### L236
 
 ```python
     assert [row["title"] for row in overview["recommendations"]] == ["ค้าง", "ใกล้"]
@@ -26870,7 +27804,7 @@ def test_recommendations_never_overbook_today_and_use_priority_tiebreak(isolated
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L235
+#### L237
 
 ```python
     assert sum(row["today_hours"] for row in overview["recommendations"]) <= 2
@@ -26881,7 +27815,7 @@ def test_recommendations_never_overbook_today_and_use_priority_tiebreak(isolated
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L236
+#### L238
 
 ```python
     storage.save([task("ต่ำ", 2, 2, priority="low"), task("สูง", 2, 2, priority="high")])
@@ -26892,7 +27826,7 @@ def test_recommendations_never_overbook_today_and_use_priority_tiebreak(isolated
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `priority` = ระดับ high/normal/low
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L237
+#### L239
 
 ```python
     assert page1.build()["focus"]["title"] == "สูง"
@@ -26902,19 +27836,19 @@ def test_recommendations_never_overbook_today_and_use_priority_tiebreak(isolated
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L238
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L239
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L240
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L241
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L242
 
 ```python
 def test_team_counts_progress_and_unassigned_tasks(isolated):
@@ -26924,7 +27858,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L241
+#### L243
 
 ```python
     owner = models.team_data()["members"][0]["id"]
@@ -26935,7 +27869,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - ชื่อที่ต้องรู้: `owner` = string รหัสสมาชิกที่รับงาน หรือว่าง; `models` = module คลาสและฟังก์ชันกลาง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L242
+#### L244
 
 ```python
     storage.save([task("ของสมาชิก", 2, 4, 1, owner=owner), task("ไม่มอบหมาย")])
@@ -26946,7 +27880,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `owner` = string รหัสสมาชิกที่รับงาน หรือว่าง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L243
+#### L245
 
 ```python
     summary = team.build()
@@ -26956,7 +27890,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L244
+#### L246
 
 ```python
     member = summary["members"][0]
@@ -26967,7 +27901,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - ชื่อที่ต้องรู้: `member` = สมาชิกหนึ่งคน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L245
+#### L247
 
 ```python
     assert member["assignment_count"] == 1
@@ -26978,7 +27912,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - ชื่อที่ต้องรู้: `member` = สมาชิกหนึ่งคน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L246
+#### L248
 
 ```python
     assert member["open_count"] == 1
@@ -26989,7 +27923,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - ชื่อที่ต้องรู้: `member` = สมาชิกหนึ่งคน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L247
+#### L249
 
 ```python
     assert member["progress"] == 25
@@ -27000,7 +27934,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - ชื่อที่ต้องรู้: `member` = สมาชิกหนึ่งคน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L248
+#### L250
 
 ```python
     assert len(summary["unassigned"]) == 1
@@ -27011,7 +27945,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - ชื่อที่ต้องรู้: `len` = จำนวนสมาชิก/อักขระ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L249
+#### L251
 
 ```python
     storage.save([task("ภาระมาก", 2, 20, owner=owner)])
@@ -27022,7 +27956,7 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `owner` = string รหัสสมาชิกที่รับงาน หรือว่าง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L250
+#### L252
 
 ```python
     assert team.build()["members"][0]["overloaded"]
@@ -27032,19 +27966,19 @@ def test_team_counts_progress_and_unassigned_tasks(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L251
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L252
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L253
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L254
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L255
 
 ```python
 def test_empty_and_completed_only_data_have_no_focus(isolated):
@@ -27054,7 +27988,7 @@ def test_empty_and_completed_only_data_have_no_focus(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L254
+#### L256
 
 ```python
     assert page1.build()["focus"] is None
@@ -27063,27 +27997,6 @@ def test_empty_and_completed_only_data_have_no_focus(isolated):
 - ตรวจคำตอบใน test: ต้องให้ `page1.build()['focus']` (อ่าน key/index) เป็น object เดียวกับ None (ไม่มีค่าที่ใช้ได้) เป็นจริง มิฉะนั้น test ไม่ผ่าน
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
 - ชื่อที่ต้องรู้: `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L255
-
-```python
-    assert page3.build({})["tasks"] == []
-```
-
-- ตรวจคำตอบใน test: ต้องให้ `page3.build({})['tasks']` (อ่าน key/index) เท่ากับ list [] เป็นจริง มิฉะนั้น test ไม่ผ่าน
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
-
-#### L256
-
-```python
-    storage.save([task(estimate=4, done=4)])
-```
-
-- เขียนรายการงานทั้งไฟล์ผ่าน storage.save()
-- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `[` เปิด list หรือการอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `]` ปิด list/การอ้าง index/key
-- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `estimate` = ชั่วโมงประมาณของงาน; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 #### L257
@@ -27099,6 +28012,27 @@ def test_empty_and_completed_only_data_have_no_focus(isolated):
 #### L258
 
 ```python
+    storage.save([task(estimate=4, done=4)])
+```
+
+- เขียนรายการงานทั้งไฟล์ผ่าน storage.save()
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `[` เปิด list หรือการอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `]` ปิด list/การอ้าง index/key
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `estimate` = ชั่วโมงประมาณของงาน; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L259
+
+```python
+    assert page3.build({})["tasks"] == []
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `page3.build({})['tasks']` (อ่าน key/index) เท่ากับ list [] เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L260
+
+```python
     assert len(page1.build()["completed"]) == 1
 ```
 
@@ -27107,19 +28041,19 @@ def test_empty_and_completed_only_data_have_no_focus(isolated):
 - ชื่อที่ต้องรู้: `len` = จำนวนสมาชิก/อักขระ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L259
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L260
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L261
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L262
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L263
 
 ```python
 def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
@@ -27129,7 +28063,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L262
+#### L264
 
 ```python
     storage.save([task(title='<script>alert("x")</script>')])
@@ -27140,7 +28074,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `title` = ชื่องาน/ชื่อหัวข้อขึ้นกับ dict
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L263
+#### L265
 
 ```python
     for path in ("/page1", "/page2", "/page3", "/team"):
@@ -27150,7 +28084,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L264
+#### L266
 
 ```python
         html = isolated.get(path).get_data(as_text=True)
@@ -27161,7 +28095,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key; `True` = boolean จริง
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L265
+#### L267
 
 ```python
         assert "ยังไม่พร้อม" not in html
@@ -27170,7 +28104,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - ตรวจคำตอบใน test: ต้องให้ `'ยังไม่พร้อม'` ไม่อยู่ใน `html` เป็นจริง มิฉะนั้น test ไม่ผ่าน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L266
+#### L268
 
 ```python
         assert '<script>alert("x")</script>' not in html
@@ -27179,7 +28113,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - ตรวจคำตอบใน test: ต้องให้ `'<script>alert("x")</script>'` ไม่อยู่ใน `html` เป็นจริง มิฉะนั้น test ไม่ผ่าน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L267
+#### L269
 
 ```python
         if path != "/team":
@@ -27189,7 +28123,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - เครื่องหมาย: `!=` เปรียบเทียบไม่เท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L268
+#### L270
 
 ```python
             assert 'name="version"' in html
@@ -27198,7 +28132,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - ตรวจคำตอบใน test: ต้องให้ `'name="version"'` อยู่ใน `html` เป็นจริง มิฉะนั้น test ไม่ผ่าน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L269
+#### L271
 
 ```python
     row = storage.load()[0]
@@ -27209,7 +28143,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L270
+#### L272
 
 ```python
     response = isolated.post("/page1", data=fields(row), follow_redirects=True)
@@ -27220,7 +28154,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `row` = dict ข้อมูลงานหนึ่งรายการ; `True` = boolean จริง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L271
+#### L273
 
 ```python
     assert "งานที่เสร็จแล้ว" in response.get_data(as_text=True)
@@ -27231,7 +28165,7 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `True` = boolean จริง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L272
+#### L274
 
 ```python
     assert storage.load()[0]["done_hours"] == 4
@@ -27242,19 +28176,19 @@ def test_all_forms_have_versions_and_templates_escape_user_input(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L273
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L274
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L275
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L276
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L277
 
 ```python
 def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
@@ -27264,7 +28198,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L276
+#### L278
 
 ```python
     done = task("เสร็จแล้ว", days=0, estimate=1, done=1)
@@ -27275,7 +28209,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - ชื่อที่ต้องรู้: `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `estimate` = ชั่วโมงประมาณของงาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L277
+#### L279
 
 ```python
     done["details"]["history"] = [{"date": date.today().isoformat(),
@@ -27286,17 +28220,17 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - ชื่อที่ต้องรู้: `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L278
+#### L280
 
 ```python
                                     "hours": 1, "kind": "work", "note": ""}]
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L277: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `done['details']['history']`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L279: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `done['details']['history']`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set; `]` ปิด list/การอ้าง index/key
 - ย่อหน้า 36 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L279
+#### L281
 
 ```python
     pending = task("วันนี้", days=0, estimate=2)
@@ -27307,7 +28241,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - ชื่อที่ต้องรู้: `pending` = รายการงานที่ remaining>0; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `estimate` = ชั่วโมงประมาณของงาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L280
+#### L282
 
 ```python
     storage.save([done, pending])
@@ -27318,7 +28252,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น; `pending` = รายการงานที่ remaining>0
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L281
+#### L283
 
 ```python
     result = page1.build()
@@ -27328,7 +28262,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L282
+#### L284
 
 ```python
     assert result["actual_today"] == 1
@@ -27338,7 +28272,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L283
+#### L285
 
 ```python
     assert result["today_remaining"] == 1
@@ -27348,7 +28282,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L284
+#### L286
 
 ```python
     assert result["recommendations"][0]["today_hours"] == 1
@@ -27358,7 +28292,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L285
+#### L287
 
 ```python
     plan = page3.build({})["tasks"][0]
@@ -27368,7 +28302,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L286
+#### L288
 
 ```python
     assert plan["available_hours"] == 1
@@ -27378,7 +28312,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L287
+#### L289
 
 ```python
     assert plan["hours_per_day"] == 3
@@ -27388,7 +28322,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L288
+#### L290
 
 ```python
     assert plan["gap"] == 1
@@ -27398,7 +28332,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L289
+#### L291
 
 ```python
     done["details"]["history"][0]["hours"] = 2
@@ -27409,7 +28343,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - ชื่อที่ต้องรู้: `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L290
+#### L292
 
 ```python
     storage.save([done, pending])
@@ -27420,7 +28354,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น; `pending` = รายการงานที่ remaining>0
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L291
+#### L293
 
 ```python
     assert page1.build()["recommendations"] == []
@@ -27430,7 +28364,7 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L292
+#### L294
 
 ```python
     assert page1.build()["open_count"] == 1
@@ -27440,19 +28374,19 @@ def test_today_work_reduces_recommendation_budget_and_capacity(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L293
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L294
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L295
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L296
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L297
 
 ```python
 def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
@@ -27462,7 +28396,7 @@ def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L296
+#### L298
 
 ```python
     row = task("ก่อนหน้า", done=1)
@@ -27473,7 +28407,7 @@ def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L297
+#### L299
 
 ```python
     row["details"]["history"] = [
@@ -27484,28 +28418,28 @@ def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L298
+#### L300
 
 ```python
         {"date": (date.today() - timedelta(days=1)).isoformat(),
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L297: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L299: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `(` เปิดกลุ่มนิพจน์/argument/tuple; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `)` ปิดกลุ่มที่เปิดด้วย (; `-` ลบ/เครื่องหมายติดลบ; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `timedelta` = ส่วนต่างเวลาที่ใช้สร้างวันที่ทดลอง; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L299
+#### L301
 
 ```python
          "hours": 1, "kind": "work", "note": ""}]
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L297: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L299: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set; `]` ปิด list/การอ้าง index/key
 - ย่อหน้า 9 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L300
+#### L302
 
 ```python
     storage.save([row, task("วันนี้", days=0)])
@@ -27516,7 +28450,7 @@ def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `days` = จำนวนวันรวมวันนี้ หรือ list สรุปวันตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L301
+#### L303
 
 ```python
     assert page1.handle(fields(row)).startswith("✓")
@@ -27527,7 +28461,7 @@ def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L302
+#### L304
 
 ```python
     assert page1.build()["actual_today"] == 0
@@ -27537,7 +28471,7 @@ def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L303
+#### L305
 
 ```python
     assert page1.build()["today_remaining"] == 2
@@ -27547,7 +28481,7 @@ def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L304
+#### L306
 
 ```python
     assert page2.build()["daily_history"][0]["hours"] == 1
@@ -27557,7 +28491,7 @@ def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L305
+#### L307
 
 ```python
     assert page2.build()["actual_total"] == 1
@@ -27567,19 +28501,19 @@ def test_past_logs_and_estimated_completion_do_not_consume_today(isolated):
 - เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L306
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L307
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L308
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L309
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L310
 
 ```python
 def test_reopen_requires_prior_manual_completion(isolated):
@@ -27589,7 +28523,7 @@ def test_reopen_requires_prior_manual_completion(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L309
+#### L311
 
 ```python
     for row in (task(), task(estimate=4, done=4)):
@@ -27600,7 +28534,7 @@ def test_reopen_requires_prior_manual_completion(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `estimate` = ชั่วโมงประมาณของงาน; `done` = ชั่วโมงที่ทำแล้ว/ยอดรวม done ในบริบทนั้น
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L310
+#### L312
 
 ```python
         storage.save([row])
@@ -27611,7 +28545,7 @@ def test_reopen_requires_prior_manual_completion(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L311
+#### L313
 
 ```python
         assert page1.handle(fields(row, action="reopen")).startswith("✗")
@@ -27622,7 +28556,7 @@ def test_reopen_requires_prior_manual_completion(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L312
+#### L314
 
 ```python
         assert storage.load() == [row]
@@ -27633,19 +28567,19 @@ def test_reopen_requires_prior_manual_completion(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L313
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
-#### L314
-
-(บรรทัดว่าง)
-
-- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
-
 #### L315
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L316
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L317
 
 ```python
 def test_daily_summary_groups_actual_work_only(isolated):
@@ -27655,7 +28589,7 @@ def test_daily_summary_groups_actual_work_only(isolated):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
 
-#### L316
+#### L318
 
 ```python
     row = task()
@@ -27666,7 +28600,7 @@ def test_daily_summary_groups_actual_work_only(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L317
+#### L319
 
 ```python
     today = date.today().isoformat()
@@ -27677,7 +28611,7 @@ def test_daily_summary_groups_actual_work_only(isolated):
 - ชื่อที่ต้องรู้: `today` = วันที่ปัจจุบันจากเครื่อง Python; `date` = ชนิดวันที่ระดับวันจาก datetime; `isoformat` = แปลง date เป็น YYYY-MM-DD
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L318
+#### L320
 
 ```python
     row["details"]["history"] = [
@@ -27688,40 +28622,40 @@ def test_daily_summary_groups_actual_work_only(isolated):
 - ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L319
+#### L321
 
 ```python
         {"date": today, "hours": 1, "kind": "work", "note": "ส่วนแรก"},
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L318: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L320: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set
 - ชื่อที่ต้องรู้: `today` = วันที่ปัจจุบันจากเครื่อง Python
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L320
+#### L322
 
 ```python
         {"date": today, "hours": 1.5, "kind": "work", "note": "ส่วนสอง"},
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L318: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L320: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set
 - ชื่อที่ต้องรู้: `today` = วันที่ปัจจุบันจากเครื่อง Python
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L321
+#### L323
 
 ```python
         {"date": today, "hours": 8, "kind": "complete", "note": ""}]
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L318: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L320: เก็บผล list [dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`, dict ที่มี key `'date'`, `'hours'`, `'kind'`, `'note'`] ลง `row['details']['history']`
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set; `]` ปิด list/การอ้าง index/key
 - ชื่อที่ต้องรู้: `today` = วันที่ปัจจุบันจากเครื่อง Python
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L322
+#### L324
 
 ```python
     storage.save([row])
@@ -27732,7 +28666,7 @@ def test_daily_summary_groups_actual_work_only(isolated):
 - ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `save` = เขียนทั้งรายการงานผ่าน storage; `row` = dict ข้อมูลงานหนึ่งรายการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L323
+#### L325
 
 ```python
     summary = page2.build()
@@ -27742,7 +28676,7 @@ def test_daily_summary_groups_actual_work_only(isolated):
 - เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L324
+#### L326
 
 ```python
     assert summary["daily_history"] == [{"date": today, "hours": 2.5, "count": 2}]
@@ -27753,7 +28687,7 @@ def test_daily_summary_groups_actual_work_only(isolated):
 - ชื่อที่ต้องรู้: `today` = วันที่ปัจจุบันจากเครื่อง Python
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-#### L325
+#### L327
 
 ```python
     assert summary["actual_total"] == 2.5
@@ -27761,6 +28695,1369 @@ def test_daily_summary_groups_actual_work_only(isolated):
 
 - ตรวจคำตอบใน test: ต้องให้ `summary['actual_total']` (อ่าน key/index) เท่ากับ `2.5` เป็นจริง มิฉะนั้น test ไม่ผ่าน
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L328
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L329
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L330
+
+```python
+@pytest.fixture
+```
+
+- decorator ของ pytest; fixture/parametrize จัดการข้อมูลชั่วคราวหรือขยายกรณีทดสอบ ไม่ใช่ route ของแอป
+- เครื่องหมาย: `@` เริ่ม decorator ในชุดทดสอบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย
+- ชื่อที่ต้องรู้: `pytest` = เครื่องมือทดสอบที่ environment โครงการมีอยู่
+
+#### L331
+
+```python
+def read_only_runtime(tmp_path, monkeypatch, isolated):
+```
+
+- ประกาศฟังก์ชัน `read_only_runtime`: fixture จำลอง EROFS เฉพาะโฟลเดอร์ bundle และแยกพื้นที่เขียนได้ไป tmp_path ใช้กับ Flask test client
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `tmp_path` = พื้นที่ชั่วคราวของ pytest; `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว
+
+#### L332
+
+```python
+    """Simulate a read-only deployment without changing the project files."""
+```
+
+- ข้อความ docstring อธิบาย module/function ไม่ใช่คำสั่งบันทึกงาน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L333
+
+```python
+    bundle = tmp_path / "bundle"
+```
+
+- เก็บผล (`tmp_path` หาร/ต่อ Path `'bundle'`) ลง `bundle`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `/` หาร; กับ pathlib.Path เป็นการต่อ path
+- ชื่อที่ต้องรู้: `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน; `tmp_path` = พื้นที่ชั่วคราวของ pytest
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L334
+
+```python
+    scratch = tmp_path / "scratch"
+```
+
+- เก็บผล (`tmp_path` หาร/ต่อ Path `'scratch'`) ลง `scratch`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `/` หาร; กับ pathlib.Path เป็นการต่อ path
+- ชื่อที่ต้องรู้: `scratch` = พื้นที่ชั่วคราวเขียนได้ของการทดสอบ; `tmp_path` = พื้นที่ชั่วคราวของ pytest
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L335
+
+```python
+    bundle.mkdir()
+```
+
+- เรียก `bundle.mkdir` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L336
+
+```python
+    scratch.mkdir()
+```
+
+- เรียก `scratch.mkdir` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `scratch` = พื้นที่ชั่วคราวเขียนได้ของการทดสอบ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L337
+
+```python
+    row = task()
+```
+
+- เก็บผล เรียก `task`: สร้าง row จำลองสำหรับ pytest โดย due_date สัมพันธ์กับวันนี้ ลง `row`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L338
+
+```python
+    row["details"]["subtasks"] = [{"title": "ทดสอบ", "done": False}]
+```
+
+- เก็บผล list [dict ที่มี key `'title'`, `'done'`] ลง `row['details']['subtasks']`
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set
+- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `False` = boolean เท็จ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L339
+
+```python
+    (bundle / "data.json").write_text(json.dumps([row]), encoding="utf-8")
+```
+
+- เรียก `(bundle / 'data.json').write_text` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `/` หาร; กับ pathlib.Path เป็นการต่อ path; `)` ปิดกลุ่มที่เปิดด้วย (; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน; `json` = standard library serialize/parse JSON; `dumps` = แปลง object เป็นข้อความ JSON; `row` = dict ข้อมูลงานหนึ่งรายการ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L340
+
+```python
+    (bundle / "planner_settings.json").write_text('{"daily_hours": 2}', encoding="utf-8")
+```
+
+- เรียก `(bundle / 'planner_settings.json').write_text` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `/` หาร; กับ pathlib.Path เป็นการต่อ path; `)` ปิดกลุ่มที่เปิดด้วย (; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L341
+
+```python
+    monkeypatch.setattr(models, "HERE", str(bundle))
+```
+
+- เรียก `monkeypatch.setattr` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `models` = module คลาสและฟังก์ชันกลาง; `str` = แปลงเป็นข้อความ; `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L342
+
+```python
+    monkeypatch.setattr(storage, "DATA_FILE", str(bundle / "data.json"))
+```
+
+- เรียก `monkeypatch.setattr` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `/` หาร; กับ pathlib.Path เป็นการต่อ path; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `str` = แปลงเป็นข้อความ; `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L343
+
+```python
+    monkeypatch.setattr(models, "SETTINGS_FILE", str(bundle / "planner_settings.json"))
+```
+
+- เรียก `monkeypatch.setattr` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `/` หาร; กับ pathlib.Path เป็นการต่อ path; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `models` = module คลาสและฟังก์ชันกลาง; `str` = แปลงเป็นข้อความ; `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L344
+
+```python
+    monkeypatch.delenv("DEADLINE_DATA_DIR", raising=False)
+```
+
+- เรียก `monkeypatch.delenv` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `False` = boolean เท็จ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L345
+
+```python
+    monkeypatch.setattr(models.tempfile, "gettempdir", lambda: str(scratch))
+```
+
+- เรียก `monkeypatch.setattr` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `models` = module คลาสและฟังก์ชันกลาง; `tempfile` = standard library สร้างพื้นที่ชั่วคราว; `str` = แปลงเป็นข้อความ; `scratch` = พื้นที่ชั่วคราวเขียนได้ของการทดสอบ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L346
+
+```python
+    original_tempfile = models.tempfile.TemporaryFile
+```
+
+- เก็บผล `models.tempfile.TemporaryFile` ลง `original_tempfile`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง; `tempfile` = standard library สร้างพื้นที่ชั่วคราว; `TemporaryFile` = เปิดไฟล์ชั่วคราวและลบอัตโนมัติเมื่อปิด ใช้ทดสอบสิทธิ์เขียนของโฟลเดอร์
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L347
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L348
+
+```python
+    def deny_bundle(*args, **kwargs):
+```
+
+- ประกาศฟังก์ชัน `deny_bundle`: ตัวจำลองปฏิเสธ TemporaryFile ใน bundle ด้วย errno.EROFS ส่วนตำแหน่งอื่นส่งต่อฟังก์ชันจริง
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `*` คูณ/ทำซ้ำข้อความ/ขยาย argument ตามตำแหน่ง; `,` คั่นสมาชิก/argument; `**` ขยาย keyword arguments หรือยกกำลังตามบริบท; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L349
+
+```python
+        if os.path.abspath(kwargs.get("dir", "")) == str(bundle):
+```
+
+- ตรวจเงื่อนไข: เรียก `os.path.abspath` ด้วย argument ที่แสดงในโค้ด เท่ากับ `str`(`bundle`); เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `os` = standard library จัดการ path; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key; `str` = แปลงเป็นข้อความ; `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L350
+
+```python
+            raise OSError(errno.EROFS, "Read-only file system")
+```
+
+- ส่ง exception/exit ตามค่าที่ระบุ ไม่ใช่ return context
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `errno` = module ค่ารหัสข้อผิดพลาดของระบบปฏิบัติการ; `EROFS` = พื้นที่ไฟล์อ่านอย่างเดียว
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L351
+
+```python
+        return original_tempfile(*args, **kwargs)
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: เรียก `original_tempfile` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `*` คูณ/ทำซ้ำข้อความ/ขยาย argument ตามตำแหน่ง; `,` คั่นสมาชิก/argument; `**` ขยาย keyword arguments หรือยกกำลังตามบริบท; `)` ปิดกลุ่มที่เปิดด้วย (
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L352
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L353
+
+```python
+    monkeypatch.setattr(models.tempfile, "TemporaryFile", deny_bundle)
+```
+
+- เรียก `monkeypatch.setattr` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `models` = module คลาสและฟังก์ชันกลาง; `tempfile` = standard library สร้างพื้นที่ชั่วคราว
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L354
+
+```python
+    monkeypatch.setattr(models, "STORAGE_NOTICE", models.configure_storage())
+```
+
+- เรียก `monkeypatch.setattr` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `models` = module คลาสและฟังก์ชันกลาง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L355
+
+```python
+    return isolated, bundle, scratch
+```
+
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: tuple [`isolated`, `bundle`, `scratch`]
+- เครื่องหมาย: `,` คั่นสมาชิก/argument
+- ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน; `scratch` = พื้นที่ชั่วคราวเขียนได้ของการทดสอบ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L356
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L357
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L358
+
+```python
+@pytest.mark.parametrize("action", ["start", "complete", "reopen", "update", "delete",
+```
+
+- decorator ของ pytest; fixture/parametrize จัดการข้อมูลชั่วคราวหรือขยายกรณีทดสอบ ไม่ใช่ route ของแอป
+- เครื่องหมาย: `@` เริ่ม decorator ในชุดทดสอบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key
+- ชื่อที่ต้องรู้: `pytest` = เครื่องมือทดสอบที่ environment โครงการมีอยู่
+
+#### L359
+
+```python
+                                         "log_time", "add_subtask", "toggle_subtask"])
+```
+
+- ส่วนของนิพจน์/รายการ argument ที่เปิดจากบรรทัดก่อนหน้า อ่านต่อรวมเป็นคำสั่งเดียว
+- เครื่องหมาย: `,` คั่นสมาชิก/argument; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
+- ย่อหน้า 41 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L360
+
+```python
+def test_read_only_runtime_supports_all_task_actions(read_only_runtime, action):
+```
+
+- ประกาศฟังก์ชัน `test_read_only_runtime_supports_all_task_actions`: ขยาย 8 action ทดสอบ POST หน้า 2 บนพื้นที่อ่านอย่างเดียว ตรวจข้อมูลปลายทางและต้นทางไม่ถูกเปลี่ยน
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+
+#### L361
+
+```python
+    client, bundle, scratch = read_only_runtime
+```
+
+- เก็บผล `read_only_runtime` ลง `(client, bundle, scratch)`
+- เครื่องหมาย: `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน; `scratch` = พื้นที่ชั่วคราวเขียนได้ของการทดสอบ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L362
+
+```python
+    if action == "reopen":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'reopen'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L363
+
+```python
+        row = storage.load()[0]
+```
+
+- เก็บผล `storage.load()[0]` (อ่าน key/index) ลง `row`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L364
+
+```python
+        assert page2.handle(fields(row, action="complete")).startswith("✓")
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `page2.handle(fields(row, action='complete')).startswith` ด้วย argument ที่แสดงในโค้ด เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L365
+
+```python
+    row = storage.load()[0]
+```
+
+- เก็บผล `storage.load()[0]` (อ่าน key/index) ลง `row`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L366
+
+```python
+    form = fields(row, action=action)
+```
+
+- เก็บผล เรียก `fields`: สร้าง form action/no/version จาก row ที่กำหนดสำหรับทดสอบฟอร์ม ลง `form`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `row` = dict ข้อมูลงานหนึ่งรายการ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L367
+
+```python
+    if action == "update":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'update'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L368
+
+```python
+        form.update(add_form(title="งานที่แก้ไข"))
+```
+
+- เรียก `form.update` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `title` = ชื่องาน/ชื่อหัวข้อขึ้นกับ dict
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L369
+
+```python
+        form["action"] = action
+```
+
+- เก็บผล `action` ลง `form['action']`
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L370
+
+```python
+    elif action == "log_time":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'log_time'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L371
+
+```python
+        form.update(hours="1", work_date=date.today().isoformat())
+```
+
+- เรียก `form.update` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `date` = ชนิดวันที่ระดับวันจาก datetime; `today` = วันที่ปัจจุบันจากเครื่อง Python; `isoformat` = แปลง date เป็น YYYY-MM-DD
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L372
+
+```python
+    elif action == "add_subtask":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'add_subtask'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L373
+
+```python
+        form["subtask_title"] = "เตรียมส่ง"
+```
+
+- เก็บผล `'เตรียมส่ง'` ลง `form['subtask_title']`
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L374
+
+```python
+    elif action == "toggle_subtask":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'toggle_subtask'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L375
+
+```python
+        form["subtask_no"] = "0"
+```
+
+- เก็บผล `'0'` ลง `form['subtask_no']`
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L376
+
+```python
+    response = client.post("/page2", data=form, follow_redirects=True)
+```
+
+- เก็บผล เรียก `client.post` ด้วย argument ที่แสดงในโค้ด ลง `response`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `form` = dict ของข้อมูลฟอร์ม POST; `True` = boolean จริง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L377
+
+```python
+    html = response.get_data(as_text=True)
+```
+
+- เก็บผล เรียก `response.get_data` ด้วย argument ที่แสดงในโค้ด ลง `html`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `True` = boolean จริง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L378
+
+```python
+    assert "ยังไม่พร้อม" not in html
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `'ยังไม่พร้อม'` ไม่อยู่ใน `html` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L379
+
+```python
+    assert "✓" in html
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `'✓'` อยู่ใน `html` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L380
+
+```python
+    assert "ข้อมูลเก็บชั่วคราว" in html
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `'ข้อมูลเก็บชั่วคราว'` อยู่ใน `html` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L381
+
+```python
+    assert os.path.commonpath([storage.DATA_FILE, str(scratch)]) == str(scratch)
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `os.path.commonpath` ด้วย argument ที่แสดงในโค้ด เท่ากับ `str`(`scratch`) เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `[` เปิด list หรือการอ้าง index/key; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `os` = standard library จัดการ path; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `str` = แปลงเป็นข้อความ; `scratch` = พื้นที่ชั่วคราวเขียนได้ของการทดสอบ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L382
+
+```python
+    saved = storage.load()
+```
+
+- เก็บผล อ่านรายการงานล่าสุดผ่าน storage.load() ลง `saved`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L383
+
+```python
+    if action == "start":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'start'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L384
+
+```python
+        assert saved[0]["details"]["started"]
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `saved[0]['details']['started']` (อ่าน key/index) เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L385
+
+```python
+    elif action == "complete":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'complete'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L386
+
+```python
+        assert saved[0]["done_hours"] == saved[0]["estimated_hours"]
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `saved[0]['done_hours']` (อ่าน key/index) เท่ากับ `saved[0]['estimated_hours']` (อ่าน key/index) เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L387
+
+```python
+    elif action == "reopen":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'reopen'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L388
+
+```python
+        assert saved[0]["done_hours"] == 0
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `saved[0]['done_hours']` (อ่าน key/index) เท่ากับ `0` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L389
+
+```python
+    elif action == "update":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'update'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L390
+
+```python
+        assert saved[0]["title"] == "งานที่แก้ไข"
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `saved[0]['title']` (อ่าน key/index) เท่ากับ `'งานที่แก้ไข'` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L391
+
+```python
+    elif action == "delete":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'delete'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L392
+
+```python
+        assert saved == []
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `saved` เท่ากับ list [] เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L393
+
+```python
+    elif action == "log_time":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'log_time'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L394
+
+```python
+        assert saved[0]["done_hours"] == 1
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `saved[0]['done_hours']` (อ่าน key/index) เท่ากับ `1` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L395
+
+```python
+    elif action == "add_subtask":
+```
+
+- ตรวจเงื่อนไข: `action` เท่ากับ `'add_subtask'`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `==` เปรียบเทียบเท่ากัน; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L396
+
+```python
+        assert len(saved[0]["details"]["subtasks"]) == 2
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `len`(`saved[0]['details']['subtasks']` (อ่าน key/index)) เท่ากับ `2` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `len` = จำนวนสมาชิก/อักขระ
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L397
+
+```python
+    else:
+```
+
+- else: ทำทางเลือกเมื่อเงื่อนไขก่อนหน้าไม่จริง
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L398
+
+```python
+        assert saved[0]["details"]["subtasks"][0]["done"]
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `saved[0]['details']['subtasks'][0]['done']` (อ่าน key/index) เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L399
+
+```python
+    assert json.loads((bundle / "data.json").read_text(encoding="utf-8"))[0]["done_hours"] == 0
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `json.loads((bundle / 'data.json').read_text(encoding='utf-8'))[0]['done_hours']` (อ่าน key/index) เท่ากับ `0` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `/` หาร; กับ pathlib.Path เป็นการต่อ path; `)` ปิดกลุ่มที่เปิดด้วย (; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `json` = standard library serialize/parse JSON; `loads` = แปลงข้อความ JSON กลับเป็น object; `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L400
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L401
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L402
+
+```python
+def test_read_only_runtime_add_settings_and_reinitialization(read_only_runtime):
+```
+
+- ประกาศฟังก์ชัน `test_read_only_runtime_add_settings_and_reinitialization`: ทดสอบเพิ่มงาน บันทึก settings และ initializer ไม่ทับข้อมูลเดิม พร้อม notice ทุกหน้าและข้อความ invalid hours
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+
+#### L403
+
+```python
+    client, bundle, scratch = read_only_runtime
+```
+
+- เก็บผล `read_only_runtime` ลง `(client, bundle, scratch)`
+- เครื่องหมาย: `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน; `scratch` = พื้นที่ชั่วคราวเขียนได้ของการทดสอบ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L404
+
+```python
+    response = client.post("/page2", data=add_form(), follow_redirects=True)
+```
+
+- เก็บผล เรียก `client.post` ด้วย argument ที่แสดงในโค้ด ลง `response`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `True` = boolean จริง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L405
+
+```python
+    assert "เพิ่มงานแล้ว" in response.get_data(as_text=True)
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `'เพิ่มงานแล้ว'` อยู่ใน เรียก `response.get_data` ด้วย argument ที่แสดงในโค้ด เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `True` = boolean จริง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L406
+
+```python
+    assert len(storage.load()) == 2
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `len`(อ่านรายการงานล่าสุดผ่าน storage.load()) เท่ากับ `2` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `len` = จำนวนสมาชิก/อักขระ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L407
+
+```python
+    response = client.post("/page3", data={"action": "save_hours", "hours": "4"}, follow_redirects=True)
+```
+
+- เก็บผล เรียก `client.post` ด้วย argument ที่แสดงในโค้ด ลง `response`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `True` = boolean จริง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L408
+
+```python
+    assert "บันทึกเวลาว่างแล้ว" in response.get_data(as_text=True)
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `'บันทึกเวลาว่างแล้ว'` อยู่ใน เรียก `response.get_data` ด้วย argument ที่แสดงในโค้ด เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `response` = ผล HTTP จาก test client หรือ fetch ตามภาษา; `True` = boolean จริง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L409
+
+```python
+    before = storage.load()
+```
+
+- เก็บผล อ่านรายการงานล่าสุดผ่าน storage.load() ลง `before`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `before` = ข้อมูลก่อนการกระทำเพื่อเทียบใน test; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L410
+
+```python
+    models.configure_storage()
+```
+
+- เรียก `models.configure_storage`: ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L411
+
+```python
+    assert storage.load() == before
+```
+
+- ตรวจคำตอบใน test: ต้องให้ อ่านรายการงานล่าสุดผ่าน storage.load() เท่ากับ `before` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก; `before` = ข้อมูลก่อนการกระทำเพื่อเทียบใน test
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L412
+
+```python
+    assert models.load_daily_hours() == 4
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `models.load_daily_hours`: อ่าน settings และตรวจค่า; หากไฟล์/โครงสร้าง/ค่าผิด ใช้ 2 เท่ากับ `4` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L413
+
+```python
+    for path in ("/page1", "/page2", "/page3", "/team", "/page3?hours=invalid"):
+```
+
+- วน tuple จำนวน 5 สมาชิกตามโค้ด ให้ `path` รับสมาชิกทีละรอบ
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L414
+
+```python
+        html = client.get(path).get_data(as_text=True)
+```
+
+- เก็บผล เรียก `client.get(path).get_data` ด้วย argument ที่แสดงในโค้ด ลง `html`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key; `True` = boolean จริง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L415
+
+```python
+        assert "ยังไม่พร้อม" not in html
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `'ยังไม่พร้อม'` ไม่อยู่ใน `html` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L416
+
+```python
+        assert "ข้อมูลเก็บชั่วคราว" in html
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `'ข้อมูลเก็บชั่วคราว'` อยู่ใน `html` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L417
+
+```python
+    html = client.get("/page3?hours=invalid").get_data(as_text=True)
+```
+
+- เก็บผล เรียก `client.get('/page3?hours=invalid').get_data` ด้วย argument ที่แสดงในโค้ด ลง `html`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key; `True` = boolean จริง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L418
+
+```python
+    assert "กรุณากรอกเวลาว่าง" in html
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `'กรุณากรอกเวลาว่าง'` อยู่ใน `html` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L419
+
+```python
+    assert json.loads((bundle / "planner_settings.json").read_text(encoding="utf-8"))["daily_hours"] == 2
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `json.loads((bundle / 'planner_settings.json').read_text(encoding='utf-8'))['daily_hours']` (อ่าน key/index) เท่ากับ `2` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `/` หาร; กับ pathlib.Path เป็นการต่อ path; `)` ปิดกลุ่มที่เปิดด้วย (; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `json` = standard library serialize/parse JSON; `loads` = แปลงข้อความ JSON กลับเป็น object; `bundle` = โฟลเดอร์ source จำลองที่ test ปฏิเสธการเขียน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L420
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L421
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L422
+
+```python
+def test_writable_local_storage_stays_in_project(isolated, tmp_path, monkeypatch):
+```
+
+- ประกาศฟังก์ชัน `test_writable_local_storage_stays_in_project`: ตรวจ localhost ที่เขียนได้ไม่ย้าย DATA_FILE/settings และยังบันทึกงานกับชั่วโมงได้
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `tmp_path` = พื้นที่ชั่วคราวของ pytest; `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test
+
+#### L423
+
+```python
+    monkeypatch.delenv("DEADLINE_DATA_DIR", raising=False)
+```
+
+- เรียก `monkeypatch.delenv` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `False` = boolean เท็จ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L424
+
+```python
+    monkeypatch.setattr(models, "HERE", str(tmp_path))
+```
+
+- เรียก `monkeypatch.setattr` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `models` = module คลาสและฟังก์ชันกลาง; `str` = แปลงเป็นข้อความ; `tmp_path` = พื้นที่ชั่วคราวของ pytest
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L425
+
+```python
+    data_file = storage.DATA_FILE
+```
+
+- เก็บผล `storage.DATA_FILE` ลง `data_file`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L426
+
+```python
+    settings_file = models.SETTINGS_FILE
+```
+
+- เก็บผล `models.SETTINGS_FILE` ลง `settings_file`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง; `SETTINGS_FILE` = path ของ planner_settings.json
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L427
+
+```python
+    assert models.configure_storage() == ""
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `models.configure_storage`: ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models เท่ากับ `''` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L428
+
+```python
+    assert storage.DATA_FILE == data_file
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `storage.DATA_FILE` เท่ากับ `data_file` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L429
+
+```python
+    assert models.SETTINGS_FILE == settings_file
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `models.SETTINGS_FILE` เท่ากับ `settings_file` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง; `SETTINGS_FILE` = path ของ planner_settings.json
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L430
+
+```python
+    assert page2.handle(add_form()).startswith("✓")
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `page2.handle(add_form()).startswith` ด้วย argument ที่แสดงในโค้ด เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L431
+
+```python
+    assert len(storage.load()) == 1
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `len`(อ่านรายการงานล่าสุดผ่าน storage.load()) เท่ากับ `1` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `len` = จำนวนสมาชิก/อักขระ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L432
+
+```python
+    assert page3.handle({"action": "save_hours", "hours": "4"}).startswith("✓")
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `page3.handle({'action': 'save_hours', 'hours': '4'}).startswith` ด้วย argument ที่แสดงในโค้ด เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument; `}` ปิด dict/set; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L433
+
+```python
+    assert models.load_daily_hours() == 4
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `models.load_daily_hours`: อ่าน settings และตรวจค่า; หากไฟล์/โครงสร้าง/ค่าผิด ใช้ 2 เท่ากับ `4` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L434
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L435
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L436
+
+```python
+def test_configured_data_directory_preserves_existing_files(isolated, tmp_path, monkeypatch):
+```
+
+- ประกาศฟังก์ชัน `test_configured_data_directory_preserves_existing_files`: ตรวจปลายทางจาก environment ไม่ทับข้อมูล/settings เดิม และ reset ใช้ SAMPLE_FILE ที่ fixture กำหนด
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `tmp_path` = พื้นที่ชั่วคราวของ pytest; `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test
+
+#### L437
+
+```python
+    destination = tmp_path / "persistent"
+```
+
+- เก็บผล (`tmp_path` หาร/ต่อ Path `'persistent'`) ลง `destination`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `/` หาร; กับ pathlib.Path เป็นการต่อ path
+- ชื่อที่ต้องรู้: `tmp_path` = พื้นที่ชั่วคราวของ pytest
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L438
+
+```python
+    destination.mkdir()
+```
+
+- เรียก `destination.mkdir` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L439
+
+```python
+    row = task("งานเดิมในพื้นที่จัดเก็บ")
+```
+
+- เก็บผล เรียก `task`: สร้าง row จำลองสำหรับ pytest โดย due_date สัมพันธ์กับวันนี้ ลง `row`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `row` = dict ข้อมูลงานหนึ่งรายการ; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L440
+
+```python
+    (destination / "data.json").write_text(json.dumps([row]), encoding="utf-8")
+```
+
+- เรียก `(destination / 'data.json').write_text` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `/` หาร; กับ pathlib.Path เป็นการต่อ path; `)` ปิดกลุ่มที่เปิดด้วย (; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ชื่อที่ต้องรู้: `json` = standard library serialize/parse JSON; `dumps` = แปลง object เป็นข้อความ JSON; `row` = dict ข้อมูลงานหนึ่งรายการ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L441
+
+```python
+    (destination / "planner_settings.json").write_text('{"daily_hours": 3}', encoding="utf-8")
+```
+
+- เรียก `(destination / 'planner_settings.json').write_text` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `/` หาร; กับ pathlib.Path เป็นการต่อ path; `)` ปิดกลุ่มที่เปิดด้วย (; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L442
+
+```python
+    monkeypatch.setenv("DEADLINE_DATA_DIR", str(destination))
+```
+
+- เรียก `monkeypatch.setenv` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `str` = แปลงเป็นข้อความ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L443
+
+```python
+    assert models.configure_storage() == ""
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `models.configure_storage`: ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models เท่ากับ `''` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L444
+
+```python
+    assert storage.load() == [row]
+```
+
+- ตรวจคำตอบใน test: ต้องให้ อ่านรายการงานล่าสุดผ่าน storage.load() เท่ากับ list [`row`] เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก; `row` = dict ข้อมูลงานหนึ่งรายการ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L445
+
+```python
+    assert models.load_daily_hours() == 3
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `models.load_daily_hours`: อ่าน settings และตรวจค่า; หากไฟล์/โครงสร้าง/ค่าผิด ใช้ 2 เท่ากับ `3` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L446
+
+```python
+    assert page2.handle(add_form()).startswith("✓")
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `page2.handle(add_form()).startswith` ด้วย argument ที่แสดงในโค้ด เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `startswith` = ตรวจว่าข้อความขึ้นต้นตามที่กำหนด
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L447
+
+```python
+    models.configure_storage()
+```
+
+- เรียก `models.configure_storage`: ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L448
+
+```python
+    assert len(storage.load()) == 2
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `len`(อ่านรายการงานล่าสุดผ่าน storage.load()) เท่ากับ `2` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `len` = จำนวนสมาชิก/อักขระ; `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L449
+
+```python
+    assert storage.reset()
+```
+
+- ตรวจคำตอบใน test: ต้องให้ เรียก `storage.reset` ด้วย argument ที่แสดงในโค้ด เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L450
+
+```python
+    assert storage.load() == []
+```
+
+- ตรวจคำตอบใน test: ต้องให้ อ่านรายการงานล่าสุดผ่าน storage.load() เท่ากับ list [] เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `==` เปรียบเทียบเท่ากัน; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ชื่อที่ต้องรู้: `storage` = module อ่าน/เขียนงานที่อาจารย์ให้; `load` = อ่าน/parse JSON หรือ storage.load ตาม module ที่เรียก
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L451
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L452
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L453
+
+```python
+@pytest.mark.parametrize("code", [errno.ENOSPC, errno.EIO])
+```
+
+- decorator ของ pytest; fixture/parametrize จัดการข้อมูลชั่วคราวหรือขยายกรณีทดสอบ ไม่ใช่ route ของแอป
+- เครื่องหมาย: `@` เริ่ม decorator ในชุดทดสอบ; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `pytest` = เครื่องมือทดสอบที่ environment โครงการมีอยู่; `errno` = module ค่ารหัสข้อผิดพลาดของระบบปฏิบัติการ; `ENOSPC` = พื้นที่เก็บข้อมูลเต็ม ไม่เลือก fallback เพื่อปิดบัง error; `EIO` = อุปกรณ์อ่านเขียนขัดข้อง ไม่เลือก fallback เพื่อปิดบัง error
+
+#### L454
+
+```python
+def test_storage_initialization_does_not_hide_other_io_errors(isolated, monkeypatch, code):
+```
+
+- ประกาศฟังก์ชัน `test_storage_initialization_does_not_hide_other_io_errors`: ขยาย ENOSPC/EIO และตรวจว่า initializer ส่งต่อ error แทนการซ่อนด้วย fallback
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `isolated` = Flask test client ที่ใช้ storage/settings ชั่วคราว; `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test
+
+#### L455
+
+```python
+    monkeypatch.delenv("DEADLINE_DATA_DIR", raising=False)
+```
+
+- เรียก `monkeypatch.delenv` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `False` = boolean เท็จ
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L456
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L457
+
+```python
+    def fail(*args, **kwargs):
+```
+
+- ประกาศฟังก์ชัน `fail`: ฟังก์ชันจำลองการเขียนไม่ได้ด้วยรหัส error ที่กรณีทดสอบกำหนด
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `*` คูณ/ทำซ้ำข้อความ/ขยาย argument ตามตำแหน่ง; `,` คั่นสมาชิก/argument; `**` ขยาย keyword arguments หรือยกกำลังตามบริบท; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L458
+
+```python
+        raise OSError(code, "Cannot write")
+```
+
+- ส่ง exception/exit ตามค่าที่ระบุ ไม่ใช่ return context
+- เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L459
+
+(บรรทัดว่าง)
+
+- บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
+
+#### L460
+
+```python
+    monkeypatch.setattr(models.tempfile, "TemporaryFile", fail)
+```
+
+- เรียก `monkeypatch.setattr` ด้วย argument ที่แสดงในโค้ด
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `monkeypatch` = pytest helper เปลี่ยนตัวแปรและคืนเมื่อจบ test; `models` = module คลาสและฟังก์ชันกลาง; `tempfile` = standard library สร้างพื้นที่ชั่วคราว
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L461
+
+```python
+    with pytest.raises(OSError) as error:
+```
+
+- ใช้ resource ใน with: เรียก `pytest.raises` ด้วย argument ที่แสดงในโค้ด; ออกจาก block แล้วปิด resource ตาม context manager
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `pytest` = เครื่องมือทดสอบที่ environment โครงการมีอยู่; `error` = ข้อความข้อผิดพลาดจาก check
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L462
+
+```python
+        models.configure_storage()
+```
+
+- เรียก `models.configure_storage`: ตรวจสิทธิ์เขียนและเลือกพื้นที่สำหรับข้อมูล/settings ตั้งปลายทาง storage โดยไม่แก้ไฟล์อาจารย์ คืนข้อความเมื่อเลือกพื้นที่ชั่วคราว; ทำงานเมื่อ import models
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
+- ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+#### L463
+
+```python
+    assert error.value.errno == code
+```
+
+- ตรวจคำตอบใน test: ต้องให้ `error.value.errno` เท่ากับ `code` เป็นจริง มิฉะนั้น test ไม่ผ่าน
+- เครื่องหมาย: `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `==` เปรียบเทียบเท่ากัน
+- ชื่อที่ต้องรู้: `error` = ข้อความข้อผิดพลาดจาก check; `value` = ค่าที่อ่าน/ตรวจอยู่ในฟังก์ชัน; `errno` = module ค่ารหัสข้อผิดพลาดของระบบปฏิบัติการ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
 ---
@@ -27771,7 +30068,7 @@ def test_daily_summary_groups_actual_work_only(isolated):
 
 ## docs/qa/serve_fixture.py — เว็บสาธิตด้วยข้อมูลชั่วคราว
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 43 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 43 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `2b18adc71201f76e75360644d0772b15fcaf6d3b4fb4ce832a05aac3f8b64667`
 
@@ -28344,7 +30641,7 @@ if __name__ == "__main__":
 
 ## docs/qa/test_reminders.cjs — ชุดทดสอบ JavaScript ด้วยส่วนจำลอง
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 97 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 97 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `02975c5a1427c25a0eb222d4a035477bcd2746b494d6d5591f2b91b020aa7b57`
 
@@ -29358,7 +31655,7 @@ test('calendar spans one all-day date across month boundaries and escapes text',
 
 ## PAGES.md — แผนแบ่งหน้าที่และความคืบหน้า
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 61 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 61 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `231b1e4c4c3ea4546470cd025ff70ebbf1074a92f6e1d873482d83bc0c7c7ee3`
 
@@ -29933,7 +32230,7 @@ test('calendar spans one all-day date across month boundaries and escapes text',
 
 ## README.md — README ระดับ repository
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 1 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 1 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `5d1b2b5f242be741d478c94acb43671007aa891a5bf4f10e37a550219c32e57a`
 
@@ -29989,7 +32286,7 @@ test('calendar spans one all-day date across month boundaries and escapes text',
 
 ## check.bat — ตัวเรียกตรวจของอาจารย์ (อ่านประกอบ ไม่ได้แก้)
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 10 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 10 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `4066797dd0e410fb8ead9ce9e20676deab95100982781a1f1c8d1f97e6832345`
 
@@ -30132,7 +32429,7 @@ pause
 
 ## docs/qa/before_upgrade/data.json — สำเนางานก่อนเพิ่ม field
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 9 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 9 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `74d01faf3a45a52d5f7a73d40c8593f4d49bf7d96e3d69e9d62e92dc873c17b1`
 
@@ -30345,7 +32642,7 @@ pause
 
 ## docs/qa/before_upgrade/data.sample.json — สำเนา sample ก่อนเพิ่ม field
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 9 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 9 physical lines (รวมบรรทัดว่าง)
 
 **SHA-256 ของไฟล์จริง:** `74d01faf3a45a52d5f7a73d40c8593f4d49bf7d96e3d69e9d62e92dc873c17b1`
 

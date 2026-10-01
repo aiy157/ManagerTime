@@ -1,13 +1,13 @@
 {
-  "date": "2026-09-30",
+  "date": "2026-10-01",
   "files": [
     {
       "source": "models.py",
       "detail": "files/models.py.md",
-      "sha256": "f29d799be760ceeddac418fd3313fc5de5e6f9cc47b365444bae9571094422ba",
-      "lines": 450,
-      "characters": 15878,
-      "line_explanations": 450
+      "sha256": "6eabe7d01b493040bcfaa6d04ec1582c74611fb0ebc6d79b1b8e55fc6dfad681",
+      "lines": 500,
+      "characters": 17854,
+      "line_explanations": 500
     },
     {
       "source": "pages/page1.py",
@@ -28,17 +28,17 @@
     {
       "source": "pages/page3.py",
       "detail": "files/pages/page3.py.md",
-      "sha256": "47306d89220b9dafd6f27ac47969ea044932d9d9fad856d87978ac688dcecfd0",
-      "lines": 38,
-      "characters": 1325,
-      "line_explanations": 38
+      "sha256": "06f96a88064c539ce3ed76025db75e9c2be0875c1b5ea5cf4ba87e2b9911f821",
+      "lines": 41,
+      "characters": 1430,
+      "line_explanations": 41
     },
     {
       "source": "pages/team.py",
       "detail": "files/pages/team.py.md",
-      "sha256": "29d6c2d3dd3196c6aa1b37c57d1f41233314f6614028a8a0d9add6830bdef82a",
+      "sha256": "414e93af02b7396dc0a2eba895ee876dd3bccd30ef2f4166003296f0215578e3",
       "lines": 64,
-      "characters": 2146,
+      "characters": 2179,
       "line_explanations": 64
     },
     {
@@ -116,10 +116,10 @@
     {
       "source": "data.json",
       "detail": "files/data.json.md",
-      "sha256": "8de58894b4763ae0c8ce088b1096d6695773b861fbef8b2a019a45f27f0ee5df",
-      "lines": 114,
-      "characters": 2328,
-      "line_explanations": 114
+      "sha256": "37c0d8486cb635c457a7f93d0c2105be420c1321ce91483fd21f8b513ed33b47",
+      "lines": 124,
+      "characters": 2613,
+      "line_explanations": 124
     },
     {
       "source": "data.sample.json",
@@ -148,10 +148,10 @@
     {
       "source": "test_planner_features.py",
       "detail": "files/test_planner_features.py.md",
-      "sha256": "a77f04500ea1ed11fa908af9641ace1a471ebcc0d242ec430966e840c36a3968",
-      "lines": 325,
-      "characters": 13377,
-      "line_explanations": 325
+      "sha256": "b53b8dec580ebfc47f0f976276fb753d392a0145016e5b9f04a30ff4c203fef6",
+      "lines": 463,
+      "characters": 19488,
+      "line_explanations": 463
     },
     {
       "source": "docs/qa/serve_fixture.py",
@@ -210,6 +210,6 @@
       "line_explanations": 9
     }
   ],
-  "total_source_lines": 2508,
+  "total_source_lines": 2709,
   "questions": 100
 }

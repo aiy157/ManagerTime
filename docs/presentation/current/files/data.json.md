@@ -1,8 +1,8 @@
 # data.json — ข้อมูลใช้งานจริง
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 114 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 124 physical lines (รวมบรรทัดว่าง)
 
-**SHA-256 ของไฟล์จริง:** `8de58894b4763ae0c8ce088b1096d6695773b861fbef8b2a019a45f27f0ee5df`
+**SHA-256 ของไฟล์จริง:** `37c0d8486cb635c457a7f93d0c2105be420c1321ce91483fd21f8b513ed33b47`
 
 **ผู้ศึกษา/บทบาท:** ข้อมูลร่วมของทุกหน้า
 
@@ -24,8 +24,8 @@
 
 ## 3. จุดที่ต้องอธิบายให้ถูก
 
-- ตัวอย่างปัจจุบัน 7 งาน เหลือรวม 29 ชั่วโมง; ค่า due/stats เปลี่ยนตามวันเครื่อง
-- owner/history ว่างตามข้อมูลจริง ไม่สร้างการทำงานย้อนหลัง
+- snapshot วันที่ 1 ตุลาคมมี 7 งาน เหลือรวม 25 ชั่วโมง มีหนึ่งงานถูกทำเครื่องหมายเสร็จตามการใช้งานจริง; ค่า due/stats เปลี่ยนตามวันเครื่อง
+- history มีเหตุการณ์ complete ที่ผู้ใช้บันทึกไว้ ไม่ใช่ชั่วโมงทำงานจริง และไม่สร้างการทำงานย้อนหลังเพิ่มเติม
 - การบันทึกเขียนทั้งไฟล์ ไม่ใช่ transaction ของฐานข้อมูล
 
 ## 4. คำถามซ้อมตอบที่เกี่ยวกับไฟล์
@@ -34,7 +34,7 @@
 - [Q015: list กับ dict ใช้ต่างกันอย่างไรในงานนี้?](../TEACHER_QUESTIONS.md#q015)
 - [Q081: data.json เก็บกี่ field?](../TEACHER_QUESTIONS.md#q081)
 - [Q082: ทำไมรายละเอียดใหม่อยู่ใน details?](../TEACHER_QUESTIONS.md#q082)
-- [Q098: ถ้าจะเปิดเป็นบริการหลายคนต้องพัฒนาอะไร?](../TEACHER_QUESTIONS.md#q098)
+- [Q098: ทำไมบน Vercel บันทึกไม่ได้ และแก้แล้วเก็บถาวรหรือไม่?](../TEACHER_QUESTIONS.md#q098)
 
 ## 7. โค้ดปัจจุบันครบทั้งไฟล์
 
@@ -47,15 +47,25 @@
     "course": "ฟิสิกส์",
     "due_date": "2026-09-26",
     "estimated_hours": 6,
-    "done_hours": 2,
+    "done_hours": 6,
     "priority": "normal",
     "details": {
       "owner": "",
       "started": true,
       "subtasks": [],
-      "history": [],
+      "history": [
+        {
+          "date": "2026-10-01",
+          "hours": 4,
+          "kind": "complete",
+          "note": "ปิดงานตามเวลาประมาณ ไม่ใช่ชั่วโมงทำงานจริง"
+        }
+      ],
       "created_on": "",
-      "progress_on": ""
+      "progress_on": "2026-10-01",
+      "before_complete": 2,
+      "subtasks_before_complete": [],
+      "completed_on": "2026-10-01"
     }
   },
   {
@@ -220,11 +230,11 @@
 ### L7
 
 ```json
-    "done_hours": 2,
+    "done_hours": 6,
 ```
 
 - key `done_hours`: ยอดชั่วโมงความคืบหน้าสะสม
-- `$[0].done_hours` = `2` (number)
+- `$[0].done_hours` = `6` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
 ### L8
@@ -281,15 +291,79 @@
 ### L13
 
 ```json
-      "history": [],
+      "history": [
 ```
 
 - key `history`: list ประวัติกิจกรรม/เวลา
 - เปิด array `$[0].details.history` เก็บหลายรายการเรียงลำดับ
-- ปิด array `$[0].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
 ### L14
+
+```json
+        {
+```
+
+- เปิด object `$[0].details.history[0]` เก็บ key:value
+
+### L15
+
+```json
+          "date": "2026-10-01",
+```
+
+- key `date`: วันที่ของประวัติ
+- `$[0].details.history[0].date` = `"2026-10-01"` (string)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+### L16
+
+```json
+          "hours": 4,
+```
+
+- key `hours`: ชั่วโมงตามชนิดรายการ
+- `$[0].details.history[0].hours` = `4` (number)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+### L17
+
+```json
+          "kind": "complete",
+```
+
+- key `kind`: ชนิด work/adjustment/complete/reopen
+- `$[0].details.history[0].kind` = `"complete"` (string)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+### L18
+
+```json
+          "note": "ปิดงานตามเวลาประมาณ ไม่ใช่ชั่วโมงทำงานจริง"
+```
+
+- key `note`: หมายเหตุ
+- `$[0].details.history[0].note` = `"ปิดงานตามเวลาประมาณ ไม่ใช่ชั่วโมงทำงานจริง"` (string)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+### L19
+
+```json
+        }
+```
+
+- ปิด object `$[0].details.history[0]`
+
+### L20
+
+```json
+      ],
+```
+
+- ปิด array `$[0].details.history` จำนวน 1 รายการ
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+### L21
 
 ```json
       "created_on": "",
@@ -299,17 +373,48 @@
 - `$[0].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L15
+### L22
 
 ```json
-      "progress_on": ""
+      "progress_on": "2026-10-01",
 ```
 
 - key `progress_on`: วันที่อัปเดตกิจกรรม; ว่างเมื่อยังไม่มีข้อมูล
-- `$[0].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
+- `$[0].details.progress_on` = `"2026-10-01"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L16
+### L23
+
+```json
+      "before_complete": 2,
+```
+
+- key `before_complete`: ยอดก่อนกดปิดเพื่อเปิดกลับ
+- `$[0].details.before_complete` = `2` (number)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+### L24
+
+```json
+      "subtasks_before_complete": [],
+```
+
+- key `subtasks_before_complete`: ค่าของโครงสร้างนี้
+- เปิด array `$[0].details.subtasks_before_complete` เก็บหลายรายการเรียงลำดับ
+- ปิด array `$[0].details.subtasks_before_complete` จำนวน 0 รายการ
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+### L25
+
+```json
+      "completed_on": "2026-10-01"
+```
+
+- key `completed_on`: วันที่ปิดงาน
+- `$[0].details.completed_on` = `"2026-10-01"` (string)
+- comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
+
+### L26
 
 ```json
     }
@@ -317,7 +422,7 @@
 
 - ปิด object `$[0].details`
 
-### L17
+### L27
 
 ```json
   },
@@ -326,7 +431,7 @@
 - ปิด object `$[0]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L18
+### L28
 
 ```json
   {
@@ -334,7 +439,7 @@
 
 - เปิด object `$[1]` เก็บ key:value
 
-### L19
+### L29
 
 ```json
     "title": "แบบฝึกหัดอนุพันธ์",
@@ -344,7 +449,7 @@
 - `$[1].title` = `"แบบฝึกหัดอนุพันธ์"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L20
+### L30
 
 ```json
     "course": "คณิตศาสตร์",
@@ -354,7 +459,7 @@
 - `$[1].course` = `"คณิตศาสตร์"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L21
+### L31
 
 ```json
     "due_date": "2026-09-27",
@@ -364,7 +469,7 @@
 - `$[1].due_date` = `"2026-09-27"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L22
+### L32
 
 ```json
     "estimated_hours": 4,
@@ -374,7 +479,7 @@
 - `$[1].estimated_hours` = `4` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L23
+### L33
 
 ```json
     "done_hours": 0,
@@ -384,7 +489,7 @@
 - `$[1].done_hours` = `0` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L24
+### L34
 
 ```json
     "priority": "normal",
@@ -394,7 +499,7 @@
 - `$[1].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L25
+### L35
 
 ```json
     "details": {
@@ -404,7 +509,7 @@
 - เปิด object `$[1].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L26
+### L36
 
 ```json
       "owner": "",
@@ -414,7 +519,7 @@
 - `$[1].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L27
+### L37
 
 ```json
       "started": false,
@@ -424,7 +529,7 @@
 - `$[1].details.started` = `false` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L28
+### L38
 
 ```json
       "subtasks": [],
@@ -435,7 +540,7 @@
 - ปิด array `$[1].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L29
+### L39
 
 ```json
       "history": [],
@@ -446,7 +551,7 @@
 - ปิด array `$[1].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L30
+### L40
 
 ```json
       "created_on": "",
@@ -456,7 +561,7 @@
 - `$[1].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L31
+### L41
 
 ```json
       "progress_on": ""
@@ -466,7 +571,7 @@
 - `$[1].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L32
+### L42
 
 ```json
     }
@@ -474,7 +579,7 @@
 
 - ปิด object `$[1].details`
 
-### L33
+### L43
 
 ```json
   },
@@ -483,7 +588,7 @@
 - ปิด object `$[1]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L34
+### L44
 
 ```json
   {
@@ -491,7 +596,7 @@
 
 - เปิด object `$[2]` เก็บ key:value
 
-### L35
+### L45
 
 ```json
     "title": "สรุปผลห้องปฏิบัติการ",
@@ -501,7 +606,7 @@
 - `$[2].title` = `"สรุปผลห้องปฏิบัติการ"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L36
+### L46
 
 ```json
     "course": "เคมี",
@@ -511,7 +616,7 @@
 - `$[2].course` = `"เคมี"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L37
+### L47
 
 ```json
     "due_date": "2026-09-28",
@@ -521,7 +626,7 @@
 - `$[2].due_date` = `"2026-09-28"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L38
+### L48
 
 ```json
     "estimated_hours": 5,
@@ -531,7 +636,7 @@
 - `$[2].estimated_hours` = `5` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L39
+### L49
 
 ```json
     "done_hours": 1,
@@ -541,7 +646,7 @@
 - `$[2].done_hours` = `1` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L40
+### L50
 
 ```json
     "priority": "normal",
@@ -551,7 +656,7 @@
 - `$[2].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L41
+### L51
 
 ```json
     "details": {
@@ -561,7 +666,7 @@
 - เปิด object `$[2].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L42
+### L52
 
 ```json
       "owner": "",
@@ -571,7 +676,7 @@
 - `$[2].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L43
+### L53
 
 ```json
       "started": true,
@@ -581,7 +686,7 @@
 - `$[2].details.started` = `true` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L44
+### L54
 
 ```json
       "subtasks": [],
@@ -592,7 +697,7 @@
 - ปิด array `$[2].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L45
+### L55
 
 ```json
       "history": [],
@@ -603,7 +708,7 @@
 - ปิด array `$[2].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L46
+### L56
 
 ```json
       "created_on": "",
@@ -613,7 +718,7 @@
 - `$[2].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L47
+### L57
 
 ```json
       "progress_on": ""
@@ -623,7 +728,7 @@
 - `$[2].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L48
+### L58
 
 ```json
     }
@@ -631,7 +736,7 @@
 
 - ปิด object `$[2].details`
 
-### L49
+### L59
 
 ```json
   },
@@ -640,7 +745,7 @@
 - ปิด object `$[2]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L50
+### L60
 
 ```json
   {
@@ -648,7 +753,7 @@
 
 - เปิด object `$[3]` เก็บ key:value
 
-### L51
+### L61
 
 ```json
     "title": "นำเสนอหัวข้อภาษาอังกฤษ",
@@ -658,7 +763,7 @@
 - `$[3].title` = `"นำเสนอหัวข้อภาษาอังกฤษ"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L52
+### L62
 
 ```json
     "course": "ภาษาอังกฤษ",
@@ -668,7 +773,7 @@
 - `$[3].course` = `"ภาษาอังกฤษ"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L53
+### L63
 
 ```json
     "due_date": "2026-10-01",
@@ -678,7 +783,7 @@
 - `$[3].due_date` = `"2026-10-01"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L54
+### L64
 
 ```json
     "estimated_hours": 6,
@@ -688,7 +793,7 @@
 - `$[3].estimated_hours` = `6` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L55
+### L65
 
 ```json
     "done_hours": 0,
@@ -698,7 +803,7 @@
 - `$[3].done_hours` = `0` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L56
+### L66
 
 ```json
     "priority": "normal",
@@ -708,7 +813,7 @@
 - `$[3].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L57
+### L67
 
 ```json
     "details": {
@@ -718,7 +823,7 @@
 - เปิด object `$[3].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L58
+### L68
 
 ```json
       "owner": "",
@@ -728,7 +833,7 @@
 - `$[3].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L59
+### L69
 
 ```json
       "started": false,
@@ -738,7 +843,7 @@
 - `$[3].details.started` = `false` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L60
+### L70
 
 ```json
       "subtasks": [],
@@ -749,7 +854,7 @@
 - ปิด array `$[3].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L61
+### L71
 
 ```json
       "history": [],
@@ -760,7 +865,7 @@
 - ปิด array `$[3].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L62
+### L72
 
 ```json
       "created_on": "",
@@ -770,7 +875,7 @@
 - `$[3].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L63
+### L73
 
 ```json
       "progress_on": ""
@@ -780,7 +885,7 @@
 - `$[3].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L64
+### L74
 
 ```json
     }
@@ -788,7 +893,7 @@
 
 - ปิด object `$[3].details`
 
-### L65
+### L75
 
 ```json
   },
@@ -797,7 +902,7 @@
 - ปิด object `$[3]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L66
+### L76
 
 ```json
   {
@@ -805,7 +910,7 @@
 
 - เปิด object `$[4]` เก็บ key:value
 
-### L67
+### L77
 
 ```json
     "title": "โครงงานเขียนโปรแกรม",
@@ -815,7 +920,7 @@
 - `$[4].title` = `"โครงงานเขียนโปรแกรม"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L68
+### L78
 
 ```json
     "course": "การเขียนโปรแกรม",
@@ -825,7 +930,7 @@
 - `$[4].course` = `"การเขียนโปรแกรม"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L69
+### L79
 
 ```json
     "due_date": "2026-10-04",
@@ -835,7 +940,7 @@
 - `$[4].due_date` = `"2026-10-04"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L70
+### L80
 
 ```json
     "estimated_hours": 8,
@@ -845,7 +950,7 @@
 - `$[4].estimated_hours` = `8` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L71
+### L81
 
 ```json
     "done_hours": 2,
@@ -855,7 +960,7 @@
 - `$[4].done_hours` = `2` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L72
+### L82
 
 ```json
     "priority": "normal",
@@ -865,7 +970,7 @@
 - `$[4].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L73
+### L83
 
 ```json
     "details": {
@@ -875,7 +980,7 @@
 - เปิด object `$[4].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L74
+### L84
 
 ```json
       "owner": "",
@@ -885,7 +990,7 @@
 - `$[4].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L75
+### L85
 
 ```json
       "started": true,
@@ -895,7 +1000,7 @@
 - `$[4].details.started` = `true` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L76
+### L86
 
 ```json
       "subtasks": [],
@@ -906,7 +1011,7 @@
 - ปิด array `$[4].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L77
+### L87
 
 ```json
       "history": [],
@@ -917,7 +1022,7 @@
 - ปิด array `$[4].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L78
+### L88
 
 ```json
       "created_on": "",
@@ -927,7 +1032,7 @@
 - `$[4].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L79
+### L89
 
 ```json
       "progress_on": ""
@@ -937,7 +1042,7 @@
 - `$[4].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L80
+### L90
 
 ```json
     }
@@ -945,7 +1050,7 @@
 
 - ปิด object `$[4].details`
 
-### L81
+### L91
 
 ```json
   },
@@ -954,7 +1059,7 @@
 - ปิด object `$[4]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L82
+### L92
 
 ```json
   {
@@ -962,7 +1067,7 @@
 
 - เปิด object `$[5]` เก็บ key:value
 
-### L83
+### L93
 
 ```json
     "title": "โปสเตอร์แนวคิดผลิตภัณฑ์",
@@ -972,7 +1077,7 @@
 - `$[5].title` = `"โปสเตอร์แนวคิดผลิตภัณฑ์"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L84
+### L94
 
 ```json
     "course": "การออกแบบ",
@@ -982,7 +1087,7 @@
 - `$[5].course` = `"การออกแบบ"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L85
+### L95
 
 ```json
     "due_date": "2026-10-06",
@@ -992,7 +1097,7 @@
 - `$[5].due_date` = `"2026-10-06"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L86
+### L96
 
 ```json
     "estimated_hours": 3,
@@ -1002,7 +1107,7 @@
 - `$[5].estimated_hours` = `3` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L87
+### L97
 
 ```json
     "done_hours": 0,
@@ -1012,7 +1117,7 @@
 - `$[5].done_hours` = `0` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L88
+### L98
 
 ```json
     "priority": "normal",
@@ -1022,7 +1127,7 @@
 - `$[5].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L89
+### L99
 
 ```json
     "details": {
@@ -1032,7 +1137,7 @@
 - เปิด object `$[5].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L90
+### L100
 
 ```json
       "owner": "",
@@ -1042,7 +1147,7 @@
 - `$[5].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L91
+### L101
 
 ```json
       "started": false,
@@ -1052,7 +1157,7 @@
 - `$[5].details.started` = `false` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L92
+### L102
 
 ```json
       "subtasks": [],
@@ -1063,7 +1168,7 @@
 - ปิด array `$[5].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L93
+### L103
 
 ```json
       "history": [],
@@ -1074,7 +1179,7 @@
 - ปิด array `$[5].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L94
+### L104
 
 ```json
       "created_on": "",
@@ -1084,7 +1189,7 @@
 - `$[5].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L95
+### L105
 
 ```json
       "progress_on": ""
@@ -1094,7 +1199,7 @@
 - `$[5].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L96
+### L106
 
 ```json
     }
@@ -1102,7 +1207,7 @@
 
 - ปิด object `$[5].details`
 
-### L97
+### L107
 
 ```json
   },
@@ -1111,7 +1216,7 @@
 - ปิด object `$[5]`
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L98
+### L108
 
 ```json
   {
@@ -1119,7 +1224,7 @@
 
 - เปิด object `$[6]` เก็บ key:value
 
-### L99
+### L109
 
 ```json
     "title": "ทบทวนก่อนสอบย่อย",
@@ -1129,7 +1234,7 @@
 - `$[6].title` = `"ทบทวนก่อนสอบย่อย"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L100
+### L110
 
 ```json
     "course": "คณิตศาสตร์",
@@ -1139,7 +1244,7 @@
 - `$[6].course` = `"คณิตศาสตร์"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L101
+### L111
 
 ```json
     "due_date": "2026-10-08",
@@ -1149,7 +1254,7 @@
 - `$[6].due_date` = `"2026-10-08"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L102
+### L112
 
 ```json
     "estimated_hours": 2,
@@ -1159,7 +1264,7 @@
 - `$[6].estimated_hours` = `2` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L103
+### L113
 
 ```json
     "done_hours": 0,
@@ -1169,7 +1274,7 @@
 - `$[6].done_hours` = `0` (number)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L104
+### L114
 
 ```json
     "priority": "normal",
@@ -1179,7 +1284,7 @@
 - `$[6].priority` = `"normal"` (string)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L105
+### L115
 
 ```json
     "details": {
@@ -1189,7 +1294,7 @@
 - เปิด object `$[6].details` เก็บ key:value
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L106
+### L116
 
 ```json
       "owner": "",
@@ -1199,7 +1304,7 @@
 - `$[6].details.owner` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L107
+### L117
 
 ```json
       "started": false,
@@ -1209,7 +1314,7 @@
 - `$[6].details.started` = `false` (boolean)
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L108
+### L118
 
 ```json
       "subtasks": [],
@@ -1220,7 +1325,7 @@
 - ปิด array `$[6].details.subtasks` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L109
+### L119
 
 ```json
       "history": [],
@@ -1231,7 +1336,7 @@
 - ปิด array `$[6].details.history` จำนวน 0 รายการ
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L110
+### L120
 
 ```json
       "created_on": "",
@@ -1241,7 +1346,7 @@
 - `$[6].details.created_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L111
+### L121
 
 ```json
       "progress_on": ""
@@ -1251,7 +1356,7 @@
 - `$[6].details.progress_on` = `""` (string); ค่าว่างตามข้อมูลนี้ ไม่เดาประวัติ/ผู้รับผิดชอบใหม่
 - comma คั่นสมาชิก และ colon คั่น key:value ตาม JSON; ห้าม trailing comma/comment
 
-### L112
+### L122
 
 ```json
     }
@@ -1259,7 +1364,7 @@
 
 - ปิด object `$[6].details`
 
-### L113
+### L123
 
 ```json
   }
@@ -1267,7 +1372,7 @@
 
 - ปิด object `$[6]`
 
-### L114
+### L124
 
 ```json
 ]

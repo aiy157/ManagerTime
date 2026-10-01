@@ -61,4 +61,4 @@ def build():
             unassigned.append(item)
     return {"group": data["group"], "members": members, "count": len(members),
             "unassigned": unassigned, "daily_hours": hours,
-            "weekly_capacity": round(hours * 7, 1)}
+            "weekly_capacity": round(hours * 7, 1), "notice": models.STORAGE_NOTICE}

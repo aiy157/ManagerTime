@@ -1,8 +1,8 @@
 # pages/page3.py — Python ของหน้า Plan
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 38 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 41 physical lines (รวมบรรทัดว่าง)
 
-**SHA-256 ของไฟล์จริง:** `47306d89220b9dafd6f27ac47969ea044932d9d9fad856d87978ac688dcecfd0`
+**SHA-256 ของไฟล์จริง:** `06f96a88064c539ce3ed76025db75e9c2be0875c1b5ea5cf4ba87e2b9911f821`
 
 **ผู้ศึกษา/บทบาท:** นายธีรเดช ฤทธิ์คำรพ · Page 3 / QA
 
@@ -40,8 +40,8 @@
 
 | ชื่อ | บรรทัดจริง | หน้าที่ |
 |---|---|---|
-| `build` | L8–L26 | ประกาศฟังก์ชัน `build`: build เตรียม context จาก GET |
-| `handle` | L29–L38 | ประกาศฟังก์ชัน `handle`: handle รับฟอร์ม POST และคืนข้อความ |
+| `build` | L8–L29 | ประกาศฟังก์ชัน `build`: build เตรียม context จาก GET |
+| `handle` | L32–L41 | ประกาศฟังก์ชัน `handle`: handle รับฟอร์ม POST และคืนข้อความ |
 
 ## 6. ชื่อและคำศัพท์ที่พบใน Python
 
@@ -96,7 +96,10 @@ def build(query):
             hours = requested
     context = models.overview(storage.load(), hours)
     context["tasks"] = models.order_items(context["items"], "deadline")
-    context["notice"] = notice
+    if notice:
+        if context["notice"]:
+            notice = notice + " · " + context["notice"]
+        context["notice"] = notice
     required = 0
     for task in context["tasks"]:
         if task["days_left"] >= 0:
@@ -298,15 +301,48 @@ def build(query):
 ### L19
 
 ```python
-    context["notice"] = notice
+    if notice:
+```
+
+- ตรวจเงื่อนไข: `notice`; เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `notice` = ข้อความเตือนจาก build
+- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+### L20
+
+```python
+        if context["notice"]:
+```
+
+- ตรวจเงื่อนไข: `context['notice']` (อ่าน key/index); เมื่อจริงจึงทำ body ที่ย่อหน้าต่อไป
+- เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
+- ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+### L21
+
+```python
+            notice = notice + " · " + context["notice"]
+```
+
+- เก็บผล ((`notice` บวก/ต่อ `' · '`) บวก/ต่อ `context['notice']` (อ่าน key/index)) ลง `notice`
+- เครื่องหมาย: `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ; `+` บวกเลข/ต่อข้อความตามชนิด; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key
+- ชื่อที่ต้องรู้: `notice` = ข้อความเตือนจาก build; `context` = dict ที่คืนให้ template
+- ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+
+### L22
+
+```python
+        context["notice"] = notice
 ```
 
 - เก็บผล `notice` ลง `context['notice']`
 - เครื่องหมาย: `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `=` กำหนดค่า/default/keyword argument ไม่ใช่การเปรียบเทียบ
 - ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template; `notice` = ข้อความเตือนจาก build
-- ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
+- ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L20
+### L23
 
 ```python
     required = 0
@@ -317,7 +353,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L21
+### L24
 
 ```python
     for task in context["tasks"]:
@@ -328,7 +364,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน; `context` = dict ที่คืนให้ template
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L22
+### L25
 
 ```python
         if task["days_left"] >= 0:
@@ -339,7 +375,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L23
+### L26
 
 ```python
             required = max(required, task["hours_per_day"])
@@ -350,7 +386,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท; `max` = เลือกค่ามากที่สุด; `task` = Assignment หรือ dict ของงานตามฟังก์ชันที่ใช้งาน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L24
+### L27
 
 ```python
     context["required_daily"] = required
@@ -361,7 +397,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template; `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L25
+### L28
 
 ```python
     context["daily_shortfall"] = models.ceil_tenth(max(0, required - hours))
@@ -372,7 +408,7 @@ def build(query):
 - ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template; `models` = module คลาสและฟังก์ชันกลาง; `max` = เลือกค่ามากที่สุด; `required` = ชั่วโมงเฉลี่ยที่ต้องทำ/ค่าสูงสุดของช่วงตามบริบท; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L26
+### L29
 
 ```python
     return context
@@ -382,19 +418,19 @@ def build(query):
 - ชื่อที่ต้องรู้: `context` = dict ที่คืนให้ template
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L27
+### L30
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-### L28
+### L31
 
 (บรรทัดว่าง)
 
 - บรรทัดว่าง แยกส่วนให้คนอ่าน ไม่มีคำสั่งทำงาน
 
-### L29
+### L32
 
 ```python
 def handle(form):
@@ -404,7 +440,7 @@ def handle(form):
 - เครื่องหมาย: `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST
 
-### L30
+### L33
 
 ```python
     if form.get("action", "") in ("start", "complete", "reopen"):
@@ -415,7 +451,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L31
+### L34
 
 ```python
         return models.quick_action(form)
@@ -426,7 +462,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง; `form` = dict ของข้อมูลฟอร์ม POST
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L32
+### L35
 
 ```python
     if form.get("action", "") != "save_hours":
@@ -437,7 +473,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `form` = dict ของข้อมูลฟอร์ม POST; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L33
+### L36
 
 ```python
         return "✗ ไม่รู้จักคำสั่ง"
@@ -446,7 +482,7 @@ def handle(form):
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'✗ ไม่รู้จักคำสั่ง'`
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L34
+### L37
 
 ```python
     hours = models.daily_hours(form.get("hours", ""))
@@ -457,7 +493,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `models` = module คลาสและฟังก์ชันกลาง; `daily_hours` = เวลาว่างรายวันที่ตั้งไว้; `form` = dict ของข้อมูลฟอร์ม POST; `get` = อ่านค่า dict พร้อม default เมื่อไม่มี key
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L35
+### L38
 
 ```python
     if hours is None:
@@ -468,7 +504,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `None` = ไม่มีค่าที่ใช้ได้ ไม่ใช่ 0 หรือ string ว่าง
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L36
+### L39
 
 ```python
         return "✗ เวลาว่างต้องตั้งแต่ 0.1 ถึง 12 ชั่วโมงต่อวัน"
@@ -477,7 +513,7 @@ def handle(form):
 - คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: `'✗ เวลาว่างต้องตั้งแต่ 0.1 ถึง 12 ชั่วโมงต่อวัน'`
 - ย่อหน้า 8 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L37
+### L40
 
 ```python
     models.save_daily_hours(hours)
@@ -488,7 +524,7 @@ def handle(form):
 - ชื่อที่ต้องรู้: `models` = module คลาสและฟังก์ชันกลาง; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
 
-### L38
+### L41
 
 ```python
     return "✓ บันทึกเวลาว่างแล้ว ภาพรวมและแผนใช้ค่านี้ร่วมกัน"

@@ -1,8 +1,8 @@
 # pages/team.py — Python ของหน้าทีม
 
-อ้างอิงไฟล์ปัจจุบัน 30 กันยายน 2569 (2026-09-30); 64 physical lines (รวมบรรทัดว่าง)
+อ้างอิงไฟล์ปัจจุบัน 1 ตุลาคม 2569 (2026-10-01); 64 physical lines (รวมบรรทัดว่าง)
 
-**SHA-256 ของไฟล์จริง:** `29d6c2d3dd3196c6aa1b37c57d1f41233314f6614028a8a0d9add6830bdef82a`
+**SHA-256 ของไฟล์จริง:** `414e93af02b7396dc0a2eba895ee876dd3bccd30ef2f4166003296f0215578e3`
 
 **ผู้ศึกษา/บทบาท:** ทีม CodeMind · อ่านข้อมูลบทบาทจริงจาก team.json
 
@@ -53,6 +53,7 @@
 
 | ชื่อ | ความหมาย |
 |---|---|
+| `STORAGE_NOTICE` | ข้อความสถานะพื้นที่เก็บข้อมูลที่ initializer คืน ว่างเมื่อใช้พื้นที่โครงการหรือพื้นที่ที่กำหนดเอง |
 | `TITLE` | ชื่อหน้าสำหรับเมนูที่ app อ่าน |
 | `TITLES` | คำนำหน้าที่ตัดออกก่อนดึงอักษรชื่อ |
 | `all_views` | วน row ทีละรายการ เรียก task_view พร้อม position ตั้งแต่ 0 แล้วคืน list ใหม่ |
@@ -161,7 +162,7 @@ def build():
             unassigned.append(item)
     return {"group": data["group"], "members": members, "count": len(members),
             "unassigned": unassigned, "daily_hours": hours,
-            "weekly_capacity": round(hours * 7, 1)}
+            "weekly_capacity": round(hours * 7, 1), "notice": models.STORAGE_NOTICE}
 ```
 
 ## 8. คำอธิบายทุกบรรทัด
@@ -787,7 +788,7 @@ def build():
     return {"group": data["group"], "members": members, "count": len(members),
 ```
 
-- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`
+- คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`, `'notice'`
 - เครื่องหมาย: `{` เปิด dict/set ตามบริบท; `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `[` เปิด list หรือการอ้าง index/key; `]` ปิด list/การอ้าง index/key; `,` คั่นสมาชิก/argument; `(` เปิดกลุ่มนิพจน์/argument/tuple; `)` ปิดกลุ่มที่เปิดด้วย (
 - ชื่อที่ต้องรู้: `members` = list สมาชิกจาก team.json; `len` = จำนวนสมาชิก/อักขระ
 - ย่อหน้า 4 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
@@ -798,7 +799,7 @@ def build():
             "unassigned": unassigned, "daily_hours": hours,
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L62: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L62: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`, `'notice'`
 - เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `,` คั่นสมาชิก/argument
 - ชื่อที่ต้องรู้: `unassigned` = pending ที่ owner ว่าง/ไม่ตรงรหัสสมาชิก; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง
@@ -806,10 +807,10 @@ def build():
 ### L64
 
 ```python
-            "weekly_capacity": round(hours * 7, 1)}
+            "weekly_capacity": round(hours * 7, 1), "notice": models.STORAGE_NOTICE}
 ```
 
-- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L62: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`
-- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `(` เปิดกลุ่มนิพจน์/argument/tuple; `*` คูณ/ทำซ้ำข้อความ/ขยาย argument ตามตำแหน่ง; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `}` ปิด dict/set
-- ชื่อที่ต้องรู้: `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน
+- ส่วนต่อ/ปิดนิพจน์ของคำสั่งเริ่ม L62: คืนให้ผู้เรียกและจบฟังก์ชันรอบนี้: dict ที่มี key `'group'`, `'members'`, `'count'`, `'unassigned'`, `'daily_hours'`, `'weekly_capacity'`, `'notice'`
+- เครื่องหมาย: `:` เริ่ม block หรือคั่น key:value ใน dict ตามบริบท; `(` เปิดกลุ่มนิพจน์/argument/tuple; `*` คูณ/ทำซ้ำข้อความ/ขยาย argument ตามตำแหน่ง; `,` คั่นสมาชิก/argument; `)` ปิดกลุ่มที่เปิดด้วย (; `.` เข้าถึง attribute/method ของชื่อด้านซ้าย; `}` ปิด dict/set
+- ชื่อที่ต้องรู้: `round` = ปัดตัวเลขตามจำนวนตำแหน่งที่ระบุ; `hours` = จำนวนชั่วโมง; อ่านหน่วยรายวันหรือครั้งนี้ตามฟังก์ชัน; `models` = module คลาสและฟังก์ชันกลาง; `STORAGE_NOTICE` = ข้อความสถานะพื้นที่เก็บข้อมูลที่ initializer คืน ว่างเมื่อใช้พื้นที่โครงการหรือพื้นที่ที่กำหนดเอง
 - ย่อหน้า 12 ช่องว่าง: อยู่ใน block ที่เปิดก่อนหน้า; Python ใช้ indentation จัดโครงสร้าง

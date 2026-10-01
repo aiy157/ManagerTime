@@ -18,7 +18,7 @@ SYMBOLS = json.loads((HERE / "study_symbols.json").read_text(encoding="utf-8"))
 GROUPS = json.loads((HERE / "study_questions.json").read_text(encoding="utf-8"))
 FN = SYMBOLS["functions"]
 NAMES = SYMBOLS["names"]
-DAY = "30 กันยายน 2569 (2026-09-30)"
+DAY = "1 ตุลาคม 2569 (2026-10-01)"
 BT = chr(96)
 
 OPS = {
@@ -217,6 +217,10 @@ def statement(node):
         return "ประกาศฟังก์ชัน " + code(node.name) + ": " + (note or "ทำงานเมื่อมีผู้เรียกตาม body ด้านล่าง")
     if isinstance(node, (ast.Import,ast.ImportFrom)):
         return "นำเข้าชื่อ/module ที่ใช้ในไฟล์: " + code(ast.unparse(node))
+    if isinstance(node, ast.Global):
+        return "ให้การกำหนดค่าของ " + ", ".join(code(name) for name in node.names) + " ภายในฟังก์ชันอ้างตัวแปรระดับ module เช่น path การตั้งค่า ไม่ใช่รายการงานใน page"
+    if isinstance(node, ast.Pass):
+        return "คำสั่งว่างใน block; with ยังเปิดและปิดไฟล์ชั่วคราวเพื่อทดสอบสิทธิ์เขียน หรือ except รับข้อผิดพลาดที่คาดไว้ตามตำแหน่ง"
     if isinstance(node, ast.Assign):
         targets = ", ".join(code(ast.unparse(x)) for x in node.targets)
         return "เก็บผล " + expr(node.value) + " ลง " + targets
@@ -750,9 +754,11 @@ def main():
             "",
             "## การตรวจความตรงกับ source","",
             "source_manifest.json เก็บชื่อไฟล์ จำนวนบรรทัด SHA และจำนวนคำอธิบาย ต้องเทียบ SHA ใหม่เมื่อแก้ source ก่อนใช้เลขบรรทัดตอบอาจารย์ เอกสาร snapshot ไม่เปลี่ยนเองเมื่อผู้ใช้แก้ data หรือเพิ่มงานผ่านเว็บไซต์","",
-            "การสร้างชุดนี้ตรวจ source/hash/JSON/แม่แบบและความครบถ้วนของเอกสาร ไม่ใช่การรันทดสอบการทำงานทั้งหมดซ้ำ ผล 42 passed/60 คะแนนให้ดูวันตรวจใน QA_REPORT",""]
+            "การสร้างเอกสารตรวจ source/hash/JSON/แม่แบบและความครบถ้วนของเอกสาร ผลทดสอบการทำงานวันที่ 1 ตุลาคม 2569: 55 passed/60 คะแนน ดูวันและขอบเขตใน QA_REPORT",
+            "",
+            "การเลือกตำแหน่งข้อมูลบน localhost/โฮสต์อ่านอย่างเดียว: [คู่มือ deployment](../../DEPLOYMENT.md)",""]
     write(OUT/"README.md","\n".join(index))
-    write(OUT/"source_manifest.json",json.dumps({"date":"2026-09-30","files":manifest,
+    write(OUT/"source_manifest.json",json.dumps({"date":"2026-10-01","files":manifest,
                                              "total_source_lines":total,"questions":100},
                                             ensure_ascii=False,indent=2))
     merged=[
@@ -795,6 +801,8 @@ def main():
         "## สิ่งที่มีจริงและข้อจำกัด","",
         "ใช้ JSON ในเครื่อง ไม่มี login/database transaction/permanent task ID/service worker/push สถานะทีมไม่ใช่หลักฐาน commit ใช้ SHA ตรวจฟอร์มเก่าแต่ไม่มี file lock การแจ้งเตือนทำงานขณะเปิด Overview และ server",
         "",
+        "เมื่อโฟลเดอร์โครงการอ่านอย่างเดียว configure_storage เลือกพื้นที่ชั่วคราวสำหรับข้อมูลและ settings พร้อมข้อความแจ้งผู้ใช้ หรือใช้ DEADLINE_DATA_DIR ที่ผู้ดูแลกำหนด ข้อมูลชั่วคราวบน serverless ไม่รับประกันข้าม instance/การเริ่มระบบใหม่ อ่าน [คู่มือ deployment](../../DEPLOYMENT.md)",
+        "",
         "## เอกสารและภาพที่สร้าง/ปรับปรุงประกอบโครงการ","",
         "| รายการ | หน้าที่ |","|---|---|",
         "| PROJECT_DETAIL.md, PYTHON_DETAIL.md, FRONTEND_DETAIL.md, JAVASCRIPT_DATA_DETAIL.md | ประวัติ source ฉบับแรก มีข้อความนำไปชุด current |",
@@ -803,6 +811,8 @@ def main():
         "| PRESENTATION_SCRIPT.md | บทพูดแยกสมาชิก |",
         "| FLOWCHARTS.md | ผังงาน GET/POST และแต่ละหน้า |",
         "| docs/qa/QA_REPORT.md | ผลตรวจและขอบเขตที่ยังไม่ยืนยัน |",
+        "| docs/DEPLOYMENT.md | สาเหตุ EROFS รูปแบบพื้นที่จัดเก็บ และข้อจำกัดบนโฮสต์ |",
+        "| .gitignore | เพิ่ม runtime-data/ เพื่อไม่ส่งข้อมูล runtime ตัวอย่างเข้า Git |",
         "| docs/qa/overview-desktop.jpg, overview-mobile.jpg | ภาพจากข้อมูลตัวอย่างจริง |",
         "| docs/qa/overview-mobile-fixture.jpg, history-mobile-fixture.jpg | ภาพจากข้อมูลทดสอบชั่วคราว |",
         "| study_metadata.json, study_symbols.json, study_questions.json | แหล่งคำอธิบาย/คำถามที่เขียนประกอบ source สำหรับสร้างชุดนี้ |",

@@ -1,6 +1,8 @@
 """Business tests for the upgraded planner; all mutations use temporary files."""
 from datetime import date, timedelta
+import errno
 import json
+import os
 
 import pytest
 
@@ -323,3 +325,139 @@ def test_daily_summary_groups_actual_work_only(isolated):
     summary = page2.build()
     assert summary["daily_history"] == [{"date": today, "hours": 2.5, "count": 2}]
     assert summary["actual_total"] == 2.5
+
+
+@pytest.fixture
+def read_only_runtime(tmp_path, monkeypatch, isolated):
+    """Simulate a read-only deployment without changing the project files."""
+    bundle = tmp_path / "bundle"
+    scratch = tmp_path / "scratch"
+    bundle.mkdir()
+    scratch.mkdir()
+    row = task()
+    row["details"]["subtasks"] = [{"title": "ทดสอบ", "done": False}]
+    (bundle / "data.json").write_text(json.dumps([row]), encoding="utf-8")
+    (bundle / "planner_settings.json").write_text('{"daily_hours": 2}', encoding="utf-8")
+    monkeypatch.setattr(models, "HERE", str(bundle))
+    monkeypatch.setattr(storage, "DATA_FILE", str(bundle / "data.json"))
+    monkeypatch.setattr(models, "SETTINGS_FILE", str(bundle / "planner_settings.json"))
+    monkeypatch.delenv("DEADLINE_DATA_DIR", raising=False)
+    monkeypatch.setattr(models.tempfile, "gettempdir", lambda: str(scratch))
+    original_tempfile = models.tempfile.TemporaryFile
+
+    def deny_bundle(*args, **kwargs):
+        if os.path.abspath(kwargs.get("dir", "")) == str(bundle):
+            raise OSError(errno.EROFS, "Read-only file system")
+        return original_tempfile(*args, **kwargs)
+
+    monkeypatch.setattr(models.tempfile, "TemporaryFile", deny_bundle)
+    monkeypatch.setattr(models, "STORAGE_NOTICE", models.configure_storage())
+    return isolated, bundle, scratch
+
+
+@pytest.mark.parametrize("action", ["start", "complete", "reopen", "update", "delete",
+                                         "log_time", "add_subtask", "toggle_subtask"])
+def test_read_only_runtime_supports_all_task_actions(read_only_runtime, action):
+    client, bundle, scratch = read_only_runtime
+    if action == "reopen":
+        row = storage.load()[0]
+        assert page2.handle(fields(row, action="complete")).startswith("✓")
+    row = storage.load()[0]
+    form = fields(row, action=action)
+    if action == "update":
+        form.update(add_form(title="งานที่แก้ไข"))
+        form["action"] = action
+    elif action == "log_time":
+        form.update(hours="1", work_date=date.today().isoformat())
+    elif action == "add_subtask":
+        form["subtask_title"] = "เตรียมส่ง"
+    elif action == "toggle_subtask":
+        form["subtask_no"] = "0"
+    response = client.post("/page2", data=form, follow_redirects=True)
+    html = response.get_data(as_text=True)
+    assert "ยังไม่พร้อม" not in html
+    assert "✓" in html
+    assert "ข้อมูลเก็บชั่วคราว" in html
+    assert os.path.commonpath([storage.DATA_FILE, str(scratch)]) == str(scratch)
+    saved = storage.load()
+    if action == "start":
+        assert saved[0]["details"]["started"]
+    elif action == "complete":
+        assert saved[0]["done_hours"] == saved[0]["estimated_hours"]
+    elif action == "reopen":
+        assert saved[0]["done_hours"] == 0
+    elif action == "update":
+        assert saved[0]["title"] == "งานที่แก้ไข"
+    elif action == "delete":
+        assert saved == []
+    elif action == "log_time":
+        assert saved[0]["done_hours"] == 1
+    elif action == "add_subtask":
+        assert len(saved[0]["details"]["subtasks"]) == 2
+    else:
+        assert saved[0]["details"]["subtasks"][0]["done"]
+    assert json.loads((bundle / "data.json").read_text(encoding="utf-8"))[0]["done_hours"] == 0
+
+
+def test_read_only_runtime_add_settings_and_reinitialization(read_only_runtime):
+    client, bundle, scratch = read_only_runtime
+    response = client.post("/page2", data=add_form(), follow_redirects=True)
+    assert "เพิ่มงานแล้ว" in response.get_data(as_text=True)
+    assert len(storage.load()) == 2
+    response = client.post("/page3", data={"action": "save_hours", "hours": "4"}, follow_redirects=True)
+    assert "บันทึกเวลาว่างแล้ว" in response.get_data(as_text=True)
+    before = storage.load()
+    models.configure_storage()
+    assert storage.load() == before
+    assert models.load_daily_hours() == 4
+    for path in ("/page1", "/page2", "/page3", "/team", "/page3?hours=invalid"):
+        html = client.get(path).get_data(as_text=True)
+        assert "ยังไม่พร้อม" not in html
+        assert "ข้อมูลเก็บชั่วคราว" in html
+    html = client.get("/page3?hours=invalid").get_data(as_text=True)
+    assert "กรุณากรอกเวลาว่าง" in html
+    assert json.loads((bundle / "planner_settings.json").read_text(encoding="utf-8"))["daily_hours"] == 2
+
+
+def test_writable_local_storage_stays_in_project(isolated, tmp_path, monkeypatch):
+    monkeypatch.delenv("DEADLINE_DATA_DIR", raising=False)
+    monkeypatch.setattr(models, "HERE", str(tmp_path))
+    data_file = storage.DATA_FILE
+    settings_file = models.SETTINGS_FILE
+    assert models.configure_storage() == ""
+    assert storage.DATA_FILE == data_file
+    assert models.SETTINGS_FILE == settings_file
+    assert page2.handle(add_form()).startswith("✓")
+    assert len(storage.load()) == 1
+    assert page3.handle({"action": "save_hours", "hours": "4"}).startswith("✓")
+    assert models.load_daily_hours() == 4
+
+
+def test_configured_data_directory_preserves_existing_files(isolated, tmp_path, monkeypatch):
+    destination = tmp_path / "persistent"
+    destination.mkdir()
+    row = task("งานเดิมในพื้นที่จัดเก็บ")
+    (destination / "data.json").write_text(json.dumps([row]), encoding="utf-8")
+    (destination / "planner_settings.json").write_text('{"daily_hours": 3}', encoding="utf-8")
+    monkeypatch.setenv("DEADLINE_DATA_DIR", str(destination))
+    assert models.configure_storage() == ""
+    assert storage.load() == [row]
+    assert models.load_daily_hours() == 3
+    assert page2.handle(add_form()).startswith("✓")
+    models.configure_storage()
+    assert len(storage.load()) == 2
+    assert storage.reset()
+    assert storage.load() == []
+
+
+@pytest.mark.parametrize("code", [errno.ENOSPC, errno.EIO])
+def test_storage_initialization_does_not_hide_other_io_errors(isolated, monkeypatch, code):
+    monkeypatch.delenv("DEADLINE_DATA_DIR", raising=False)
+
+    def fail(*args, **kwargs):
+        raise OSError(code, "Cannot write")
+
+    monkeypatch.setattr(models.tempfile, "TemporaryFile", fail)
+    with pytest.raises(OSError) as error:
+        models.configure_storage()
+    assert error.value.errno == code

@@ -1,6 +1,6 @@
 # คู่มือศึกษาและซ้อมตอบ — โค้ดปัจจุบัน
 
-เดดไลน์ไม่ชนกัน · CodeMind กลุ่ม 6 · 30 กันยายน 2569 (2026-09-30)
+เดดไลน์ไม่ชนกัน · CodeMind กลุ่ม 6 · 1 ตุลาคม 2569 (2026-10-01)
 
 ## เริ่มอ่านจากสามส่วนนี้
 
@@ -8,7 +8,7 @@
 2. [คู่มือรวมทุกไฟล์พร้อมโค้ดและคำอธิบาย](PROJECT_DETAIL_ALL.md)
 3. รายละเอียดเฉพาะไฟล์ในตารางด้านล่าง
 
-ครอบคลุม 26 ไฟล์โค้ด/ข้อมูล/เครื่องมือประกอบ รวม 2508 physical lines แต่ละไฟล์มีหน้าที่ ข้อมูลรับเข้า/ส่งออก ความสัมพันธ์ ลำดับทำงาน จุดที่ต้องระวัง โค้ดครบ และคำอธิบายรายบรรทัดพร้อม SHA-256
+ครอบคลุม 26 ไฟล์โค้ด/ข้อมูล/เครื่องมือประกอบ รวม 2709 physical lines แต่ละไฟล์มีหน้าที่ ข้อมูลรับเข้า/ส่งออก ความสัมพันธ์ ลำดับทำงาน จุดที่ต้องระวัง โค้ดครบ และคำอธิบายรายบรรทัดพร้อม SHA-256
 
 **ชื่อไฟล์จริง:** หน้าแรกใช้ templates/home.html ไม่มี index.html ในโครงการนี้
 
@@ -18,10 +18,10 @@
 
 | ไฟล์จริง | รายละเอียด | บรรทัด | หน้าที่ |
 |---|---|---:|---|
-| `models.py` | [เปิดอ่าน](files/models.py.md) | 450 | คลาสและกติกากลางของระบบ |
+| `models.py` | [เปิดอ่าน](files/models.py.md) | 500 | คลาสและกติกากลางของระบบ |
 | `pages/page1.py` | [เปิดอ่าน](files/pages/page1.py.md) | 23 | Python ของหน้า Overview |
 | `pages/page2.py` | [เปิดอ่าน](files/pages/page2.py.md) | 173 | Python ของหน้าจัดการงาน |
-| `pages/page3.py` | [เปิดอ่าน](files/pages/page3.py.md) | 38 | Python ของหน้า Plan |
+| `pages/page3.py` | [เปิดอ่าน](files/pages/page3.py.md) | 41 | Python ของหน้า Plan |
 | `pages/team.py` | [เปิดอ่าน](files/pages/team.py.md) | 64 | Python ของหน้าทีม |
 | `templates/home.html` | [เปิดอ่าน](files/templates/home.html.md) | 17 | HTML/Jinja ของหน้าแรก |
 | `templates/page1.html` | [เปิดอ่าน](files/templates/page1.html.md) | 82 | HTML/Jinja ของ Overview |
@@ -32,11 +32,11 @@
 | `static/style.css` | [เปิดอ่าน](files/static/style.css.md) | 359 | CSS เดิมและส่วนที่เพิ่มสำหรับโครงการ |
 | `static/js/forms.js` | [เปิดอ่าน](files/static/js/forms.js.md) | 62 | JavaScript ช่วยตรวจและใช้งานฟอร์ม |
 | `static/js/reminders.js` | [เปิดอ่าน](files/static/js/reminders.js.md) | 153 | JavaScript แจ้งเตือนและไฟล์ปฏิทิน |
-| `data.json` | [เปิดอ่าน](files/data.json.md) | 114 | ข้อมูลใช้งานจริง |
+| `data.json` | [เปิดอ่าน](files/data.json.md) | 124 | ข้อมูลใช้งานจริง |
 | `data.sample.json` | [เปิดอ่าน](files/data.sample.json.md) | 114 | ข้อมูลตัวอย่างสำหรับคืนค่า |
 | `team.json` | [เปิดอ่าน](files/team.json.md) | 14 | ชื่อกลุ่ม สมาชิก และหน้าที่รายวิชา |
 | `planner_settings.json` | [เปิดอ่าน](files/planner_settings.json.md) | 3 | งบเวลาว่างรายวัน |
-| `test_planner_features.py` | [เปิดอ่าน](files/test_planner_features.py.md) | 325 | ชุดทดสอบธุรกิจเพิ่มเติม |
+| `test_planner_features.py` | [เปิดอ่าน](files/test_planner_features.py.md) | 463 | ชุดทดสอบธุรกิจเพิ่มเติม |
 | `docs/qa/serve_fixture.py` | [เปิดอ่าน](files/docs/qa/serve_fixture.py.md) | 43 | เว็บสาธิตด้วยข้อมูลชั่วคราว |
 | `docs/qa/test_reminders.cjs` | [เปิดอ่าน](files/docs/qa/test_reminders.cjs.md) | 97 | ชุดทดสอบ JavaScript ด้วยส่วนจำลอง |
 | `PAGES.md` | [เปิดอ่าน](files/PAGES.md.md) | 61 | แผนแบ่งหน้าที่และความคืบหน้า |
@@ -67,4 +67,6 @@
 
 source_manifest.json เก็บชื่อไฟล์ จำนวนบรรทัด SHA และจำนวนคำอธิบาย ต้องเทียบ SHA ใหม่เมื่อแก้ source ก่อนใช้เลขบรรทัดตอบอาจารย์ เอกสาร snapshot ไม่เปลี่ยนเองเมื่อผู้ใช้แก้ data หรือเพิ่มงานผ่านเว็บไซต์
 
-การสร้างชุดนี้ตรวจ source/hash/JSON/แม่แบบและความครบถ้วนของเอกสาร ไม่ใช่การรันทดสอบการทำงานทั้งหมดซ้ำ ผล 42 passed/60 คะแนนให้ดูวันตรวจใน QA_REPORT
+การสร้างเอกสารตรวจ source/hash/JSON/แม่แบบและความครบถ้วนของเอกสาร ผลทดสอบการทำงานวันที่ 1 ตุลาคม 2569: 55 passed/60 คะแนน ดูวันและขอบเขตใน QA_REPORT
+
+การเลือกตำแหน่งข้อมูลบน localhost/โฮสต์อ่านอย่างเดียว: [คู่มือ deployment](../../DEPLOYMENT.md)

@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 venv/
 *.pyc
+runtime-data/
 .DS_Store
 Thumbs.db
 # uploaded photos are named <name>-<timestamp>.<ext>; keep them small or ignore them:

@@ -1,9 +1,11 @@
 """Assignment, shared calculations, and form actions for Deadline Compass."""
 from datetime import date
+import errno
 import hashlib
 import json
 import math
 import os
+import tempfile
 
 import storage
 
@@ -11,6 +13,53 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_FILE = os.path.join(HERE, "planner_settings.json")
 TEAM_FILE = os.path.join(HERE, "team.json")
 PRIORITIES = {"high": "สูง", "normal": "ปกติ", "low": "ต่ำ"}
+
+
+def configure_storage():
+    """Keep the given storage API; select a writable location before pages use it."""
+    global SETTINGS_FILE
+    configured = os.environ.get("DEADLINE_DATA_DIR", "").strip()
+    data_dir = os.path.abspath(configured or HERE)
+    temporary = False
+    try:
+        os.makedirs(data_dir, exist_ok=True)
+        with tempfile.TemporaryFile(dir=data_dir):
+            pass
+    except OSError as error:
+        if configured or error.errno not in (errno.EROFS, errno.EACCES, errno.EPERM):
+            raise
+        suffix = hashlib.sha256(HERE.encode("utf-8")).hexdigest()[:12]
+        data_dir = os.path.join(tempfile.gettempdir(), "deadline-compass-" + suffix)
+        os.makedirs(data_dir, exist_ok=True)
+        temporary = True
+    if data_dir == os.path.abspath(HERE):
+        return ""
+    for name in ("data.json", "planner_settings.json"):
+        target = os.path.join(data_dir, name)
+        if not os.path.exists(target):
+            source = os.path.join(HERE, name)
+            if os.path.exists(source):
+                with open(source, encoding="utf-8") as file:
+                    text = file.read()
+            elif name == "data.json":
+                text = "[]"
+            else:
+                text = '{"daily_hours": 2}'
+            try:
+                # Exclusive creation preserves data already saved by another start.
+                with open(target, "x", encoding="utf-8") as file:
+                    file.write(text)
+            except FileExistsError:
+                pass
+    storage.DATA_FILE = os.path.join(data_dir, "data.json")
+    SETTINGS_FILE = os.path.join(data_dir, "planner_settings.json")
+    if temporary:
+        return ("เวอร์ชันสาธิต: ข้อมูลเก็บชั่วคราว อาจหายหรือไม่ต่อเนื่องเมื่อระบบเริ่มใหม่ "
+                "หากต้องการเก็บงานถาวร กรุณาใช้งานในเครื่องหรือพื้นที่จัดเก็บถาวร")
+    return ""
+
+
+STORAGE_NOTICE = configure_storage()
 
 
 class Assignment:
@@ -324,7 +373,8 @@ def overview(rows, hours):
             "soon_count": soon_count, "overdue_count": overdue_count,
             "remaining_total": round(remaining_total, 2), "risk_count": risk_count,
             "daily_hours": hours, "stale_count": stale_count,
-            "actual_today": actual_today, "today_remaining": today_remaining}
+            "actual_today": actual_today, "today_remaining": today_remaining,
+            "notice": STORAGE_NOTICE}
 
 
 def record_history(row, hours, kind, on_date, note=""):

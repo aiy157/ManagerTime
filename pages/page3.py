@@ -16,7 +16,10 @@ def build(query):
             hours = requested
     context = models.overview(storage.load(), hours)
     context["tasks"] = models.order_items(context["items"], "deadline")
-    context["notice"] = notice
+    if notice:
+        if context["notice"]:
+            notice = notice + " · " + context["notice"]
+        context["notice"] = notice
     required = 0
     for task in context["tasks"]:
         if task["days_left"] >= 0:
